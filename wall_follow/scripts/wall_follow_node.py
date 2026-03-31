@@ -29,7 +29,7 @@ class WallFollow(Node):
 
         # TODO: store any necessary values you think you'll need
 
-    def get_range(self, range_data, angle):
+    def get_range(self, range_data, angle): #alex and fiona
         """
         Simple helper to return the corresponding range measurement at a given angle. Make sure you take care of NaNs and infs.
 
@@ -45,7 +45,7 @@ class WallFollow(Node):
         #TODO: implement
         return 0.0
 
-    def get_error(self, range_data, dist):
+    def get_error(self, range_data, dist): #others
         """
         Calculates the error to the wall. Follow the wall to the left (going counter clockwise in the Levine loop). You potentially will need to use get_range()
 
@@ -60,7 +60,7 @@ class WallFollow(Node):
         #TODO:implement
         return 0.0
 
-    def pid_control(self, error, velocity):
+    def pid_control(self, error, velocity): #alex and fiona
         """
         Based on the calculated error, publish vehicle control
 
@@ -72,11 +72,11 @@ class WallFollow(Node):
             None
         """
         angle = 0.0
-        # TODO: Use kp, ki & kd to implement a PID controller
+        # TODO: Use kp, ki & kd to implement a PID controller 
         drive_msg = AckermannDriveStamped()
         # TODO: fill in drive message and publish
 
-    def scan_callback(self, msg):
+    def scan_callback(self, msg): #others
         """
         Callback function for LaserScan messages. Calculate the error and publish the drive message in this function.
 
