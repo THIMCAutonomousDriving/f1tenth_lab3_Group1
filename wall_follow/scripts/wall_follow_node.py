@@ -34,16 +34,20 @@ class WallFollow(Node):
         Simple helper to return the corresponding range measurement at a given angle. Make sure you take care of NaNs and infs.
 
         Args:
-            range_data: single range array from the LiDAR
+            range_data: single range array from the LiDAR       full laser scan message please
             angle: between angle_min and angle_max of the LiDAR
 
         Returns:
             range: range measurement in meters at the given angle
 
         """
+        # angle_increment = self.laser_scan.angle_increment
+        # min_angle = self.laser_scan.min_angle
+        # index = round((angle - min_angle) / angle_increment , 0)
+        # range = laser_scan.ranges[index]
 
         #TODO: implement
-        return 0.0
+        return 0.0 # range
 
     def get_error(self, range_data, dist): #others
         """
