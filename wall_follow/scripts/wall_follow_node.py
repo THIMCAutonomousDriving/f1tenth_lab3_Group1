@@ -16,6 +16,9 @@ class WallFollow(Node):
         drive_topic = '/drive'
 
         # TODO: create subscribers and publishers
+        
+        #Initialized Publisher for the new drive data
+        self.publisher_ackermann = self.create_publisher(AckermannDriveStamped, drive_topic, 10)
 
         # TODO: set PID gains
         # self.kp = 
@@ -75,10 +78,48 @@ class WallFollow(Node):
         Returns:
             None
         """
+# TODO: Use kp, ki & kd to implement a PID controller 
+        #As far as I understand it right now the programm will continously use this function and this serves as the loop
+        #Still need to integrate time and prev_time
+        #The calculation for the PID right now uses the "global"-Variable for error/prev_error.
+        #Troubleshooting may include switchitg "self.error" to this functions "error"
+        pid = 0.0
+
+        # P-Part
+        #Calculated as: kp * error
+        p = self.kp*error
+        
+        # I-Part
+        #Calculated as: integral + ki * error * delta_time
+        i = self.integral + self.ki * error * (time - prev_time)
+        self.integral = i #Integral is the accumulated correction/The actual integratet part up until now
+        #If necessary implement Wind up filter here.
+        #in Inicializing: self.integral = 0.0
+
+        # D-Part
+        #Calculated as: kd * (delta_error / delta_time)
+        d = self.kd * ((self.error - self.prev_error) / (time - prev_time))
+
+        # Combination
+        pid = p + i + d
+        
         angle = 0.0
-        # TODO: Use kp, ki & kd to implement a PID controller 
+        angle = pid
+
+        #Create AckermannDrive and fill it with anlge and velocity then publish
         drive_msg = AckermannDriveStamped()
-        # TODO: fill in drive message and publish
+        
+        drive_msg.drive.steering_angle = angle
+        drive_msg.drive.speed = velocity
+
+        self.get_logger().info(f"Desired velocity set to: {velocity:.2f}; Angle corrected to {angle:.2f}")
+        self.publisher_ackermann.publish(drive_msg)
+        #Initialize: self.publisher_ackermann = self.create_publisher(AckermannDriveStamped, drive_topic, 10)
+
+        #!!If not done in error function: Implement the saving of the previous error: self.prev_error = error
+        #!!If someone else needs the time/prev_time otherwise ill need to get it from somewhere.
+        #For example laserscan. i. e. laser_scan.scan_time or odometry.header.time.sec / odometry.header.time.nanosec
+        #Maybe other function like using real time something might be possible as well
 
     def scan_callback(self, msg): #others
         """
