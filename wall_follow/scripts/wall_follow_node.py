@@ -64,8 +64,34 @@ class WallFollow(Node):
             error: calculated error
         """
 
-        #TODO:implement
-        return 0.0
+        theta = np.deg2rad(45.0) # angle between the two beams
+
+        b_angle = np.deg2rad(90.0) #90 deg angle 
+        a_angle = b_angle - theta   #45 deg angle
+
+        a = self.get_range(range_data, a_angle) #distance to whats front left (prob. wall too)
+        b = self.get_range(range_data, b_angle) #distance to whats directly on the left (left wall)
+
+        # safety check: returns False if Nan, inf 
+        if not np.isfinite(a) or not np.isfinite(b):
+            return 0.0
+
+
+        alpha = np.arctan2(a * np.cos(theta) - b, # estimated wall angle relative to the car
+                        a * np.sin(theta))
+
+
+        Dt = b * np.cos(alpha) # curent distance to wall
+
+        L = 1.0 # lookahead distance
+
+        
+        Dt1 = Dt + L * np.sin(alpha) # future projected distance to wall (estimated future distance)
+
+        # for left wall following: positive error means car is too far from the left wall
+        error = Dt1 - dist # actual d - desired d
+
+        return error
 
     def pid_control(self, error, velocity): #alex and fiona
         """
@@ -131,11 +157,32 @@ class WallFollow(Node):
         Returns:
             None
         """
-        error = 0.0 # TODO: replace with error calculated by get_error()
-        velocity = 0.0 # TODO: calculate desired car velocity based on error
-        self.pid_control(error, velocity) # TODO: actuate the car with PID
+        # The desired distance to follow (e.g., stay 1.0 meter away from the left wall)
+        desired_distance = 1.0 
 
+        # 2. Calculate the error.
+        # Note: We are passing the entire 'msg' object as the 'range_data' parameter 
+        # so that get_range() can access msg.angle_increment, msg.angle_min, etc
+        error = self.get_error(msg, desired_distance) 
 
+        # Create a dynamic velocity profile based on the magnitude of the error
+        # If the error is small, the car is driving straight and can go fast
+        # If the error is large, the car is cornering or too close to a wall and must slow down
+        abs_error = abs(error)
+
+        if abs_error < 0.1:
+            # Error is very low, the car is parallel to the wall, speed up
+            velocity = 1.5 
+        elif abs_error < 0.3:
+            # Slight deviation, medium speed
+            velocity = 1.0 
+        else:
+            # Large error, sharp turn or correction required, slow down
+            velocity = 0.5 
+
+        # Trigger the PID controller with the calculated error and velocity
+        self.pid_control(error, velocity)
+        
 def main(args=None):
     rclpy.init(args=args)
     print("WallFollow Initialized")
