@@ -19,7 +19,8 @@ class WallFollow(Node):
         
         #Initialized Publisher for the new drive data
         self.publisher_ackermann = self.create_publisher(AckermannDriveStamped, drive_topic, 10)
-
+        self.laser_scan_subscriber = self.create_subscription(LaserScan, '/scan', 10, self.scan_callback)
+        
         # TODO: set PID gains
         #Convert to Parameters
         self.kp = 0.5
@@ -60,7 +61,7 @@ class WallFollow(Node):
         #TODO: implement
         return range # 
 
-    def get_error(self, range_data, dist): #others
+    def get_error(self, range_data: LaserScan, dist): #others
         """
         Calculates the error to the wall. Follow the wall to the left (going counter clockwise in the Levine loop). You potentially will need to use get_range()
 
