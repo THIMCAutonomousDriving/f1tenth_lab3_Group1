@@ -159,15 +159,11 @@ class WallFollow(Node):
         """
         # The desired distance to follow (e.g., stay 1.0 meter away from the left wall)
         desired_distance = 1.0 
-
-        # 2. Calculate the error.
-        # Note: We are passing the entire 'msg' object as the 'range_data' parameter 
-        # so that get_range() can access msg.angle_increment, msg.angle_min, etc
+        
         error = self.get_error(msg, desired_distance) 
 
         # Create a dynamic velocity profile based on the magnitude of the error
-        # If the error is small, the car is driving straight and can go fast
-        # If the error is large, the car is cornering or too close to a wall and must slow down
+
         abs_error = abs(error)
 
         if abs_error < 0.1:
