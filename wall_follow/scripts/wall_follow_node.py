@@ -21,14 +21,17 @@ class WallFollow(Node):
         self.publisher_ackermann = self.create_publisher(AckermannDriveStamped, drive_topic, 10)
 
         # TODO: set PID gains
-        # self.kp = 
-        # self.kd = 
-        # self.ki = 
+        self.kp = 0.5
+        self.kd = 0.7
+        self.ki = 1.0
 
         # TODO: store history
-        # self.integral = 
-        # self.prev_error = 
-        # self.error = 
+        self.integral = 0.0
+        self.prev_error = 0.0 
+        self.error = 0.0
+
+        self.time = 0.0
+        self.prev_time = 0.0
 
         # TODO: store any necessary values you think you'll need
 
@@ -117,14 +120,14 @@ class WallFollow(Node):
         
         # I-Part
         #Calculated as: integral + ki * error * delta_time
-        i = self.integral + self.ki * error * (time - prev_time)
+        i = self.integral + self.ki * error * (self.time - self.prev_time)
         self.integral = i #Integral is the accumulated correction/The actual integratet part up until now
         #If necessary implement Wind up filter here.
         #in Inicializing: self.integral = 0.0
 
         # D-Part
         #Calculated as: kd * (delta_error / delta_time)
-        d = self.kd * ((self.error - self.prev_error) / (time - prev_time))
+        d = self.kd * ((self.error - self.prev_error) / (self.time - self.prev_time))
 
         # Combination
         pid = p + i + d
@@ -140,6 +143,7 @@ class WallFollow(Node):
 
         self.get_logger().info(f"Desired velocity set to: {velocity:.2f}; Angle corrected to {angle:.2f}")
         self.publisher_ackermann.publish(drive_msg)
+        self.prev_time = self.time
         #Initialize: self.publisher_ackermann = self.create_publisher(AckermannDriveStamped, drive_topic, 10)
 
         #!!If not done in error function: Implement the saving of the previous error: self.prev_error = error
@@ -159,7 +163,7 @@ class WallFollow(Node):
         """
         # The desired distance to follow (e.g., stay 1.0 meter away from the left wall)
         desired_distance = 1.0 
-        
+
         error = self.get_error(msg, desired_distance) 
 
         # Create a dynamic velocity profile based on the magnitude of the error
