@@ -21,6 +21,7 @@ class WallFollow(Node):
         self.publisher_ackermann = self.create_publisher(AckermannDriveStamped, drive_topic, 10)
 
         # TODO: set PID gains
+        #Convert to Parameters
         self.kp = 0.5
         self.kd = 0.7
         self.ki = 1.0
@@ -51,7 +52,7 @@ class WallFollow(Node):
         min_angle = range_data.angle_min
         index = round((angle - min_angle) / angle_increment , 0)
         range = range_data.ranges[index]
-
+        
         # check for inf and nan
         if not np.isfinite(range):
             return 0.0
@@ -100,7 +101,7 @@ class WallFollow(Node):
 
         return error
 
-    def pid_control(self, error, velocity): #alex and fiona
+    def pid_control(self, error, velocity, range_data: LaserScan): #alex and fiona
         """
         Based on the calculated error, publish vehicle control
 
@@ -113,9 +114,8 @@ class WallFollow(Node):
         """
 # TODO: Use kp, ki & kd to implement a PID controller 
         #As far as I understand it right now the programm will continously use this function and this serves as the loop
-        #Still need to integrate time and prev_time
-        #The calculation for the PID right now uses the "global"-Variable for error/prev_error.
-        #Troubleshooting may include switchitg "self.error" to this functions "error"
+        self.time = range_data.header.stamp.nanosec
+
         pid = 0.0
 
         # P-Part
@@ -124,10 +124,9 @@ class WallFollow(Node):
         
         # I-Part
         #Calculated as: integral + ki * error * delta_time
-        i = self.integral + self.ki * error * (self.time - self.prev_time)
+        i = self.integral + self.ki * error * (self.time - self.prev_time) # maybe convert to sec 
         self.integral = i #Integral is the accumulated correction/The actual integratet part up until now
         #If necessary implement Wind up filter here.
-        #in Inicializing: self.integral = 0.0
 
         # D-Part
         #Calculated as: kd * (delta_error / delta_time)
@@ -147,14 +146,11 @@ class WallFollow(Node):
 
         self.get_logger().info(f"Desired velocity set to: {velocity:.2f}; Angle corrected to {angle:.2f}")
         self.publisher_ackermann.publish(drive_msg)
+
+        #Store history
         self.prev_time = self.time
         self.prev_error = error
-        #Initialize: self.publisher_ackermann = self.create_publisher(AckermannDriveStamped, drive_topic, 10)
 
-        #!!If not done in error function: Implement the saving of the previous error: self.prev_error = error
-        #!!If someone else needs the time/prev_time otherwise ill need to get it from somewhere.
-        #For example laserscan. i. e. laser_scan.scan_time or odometry.header.time.sec / odometry.header.time.nanosec
-        #Maybe other function like using real time something might be possible as well
 
     def scan_callback(self, msg): #others
         """
@@ -186,7 +182,7 @@ class WallFollow(Node):
             velocity = 0.5 
 
         # Trigger the PID controller with the calculated error and velocity
-        self.pid_control(self.error, velocity)
+        self.pid_control(self.error, velocity, msg)
         
 def main(args=None):
     rclpy.init(args=args)
