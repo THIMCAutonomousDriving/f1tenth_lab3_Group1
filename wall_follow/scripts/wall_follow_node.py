@@ -23,6 +23,10 @@ class WallFollow(Node):
         
         # TODO: set PID gains
         #Convert to Parameters
+        #self.declare_parameter("kp",0.5)
+        #self.declare_parameter("kd",0.7)
+        #self.declare_parameter("ki",1.0)
+        #self.get_parameter('kp').get_parameter_value().double_value
         self.kp = 0.5
         self.kd = 0.7
         self.ki = 1.0
