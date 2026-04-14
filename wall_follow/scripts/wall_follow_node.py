@@ -40,7 +40,7 @@ class WallFollow(Node):
         Simple helper to return the corresponding range measurement at a given angle. Make sure you take care of NaNs and infs.
 
         Args:
-            range_data: single range array from the LiDAR       full laser scan message please
+            range_data: single range array from the LiDAR
             angle: between angle_min and angle_max of the LiDAR
 
         Returns:
