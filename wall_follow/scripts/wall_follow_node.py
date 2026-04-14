@@ -131,7 +131,7 @@ class WallFollow(Node):
 
         # D-Part
         #Calculated as: kd * (delta_error / delta_time)
-        d = self.kd * ((self.error - self.prev_error) / (self.time - self.prev_time))
+        d = self.kd * ((error - self.prev_error) / (self.time - self.prev_time))
 
         # Combination
         pid = p + i + d
@@ -148,6 +148,7 @@ class WallFollow(Node):
         self.get_logger().info(f"Desired velocity set to: {velocity:.2f}; Angle corrected to {angle:.2f}")
         self.publisher_ackermann.publish(drive_msg)
         self.prev_time = self.time
+        self.prev_error = error
         #Initialize: self.publisher_ackermann = self.create_publisher(AckermannDriveStamped, drive_topic, 10)
 
         #!!If not done in error function: Implement the saving of the previous error: self.prev_error = error
@@ -168,11 +169,11 @@ class WallFollow(Node):
         # The desired distance to follow (e.g., stay 1.0 meter away from the left wall)
         desired_distance = 1.0 
 
-        error = self.get_error(msg, desired_distance) 
+        self.error = self.get_error(msg, desired_distance) 
 
         # Create a dynamic velocity profile based on the magnitude of the error
 
-        abs_error = abs(error)
+        abs_error = abs(self.error)
 
         if abs_error < 0.1:
             # Error is very low, the car is parallel to the wall, speed up
@@ -185,7 +186,7 @@ class WallFollow(Node):
             velocity = 0.5 
 
         # Trigger the PID controller with the calculated error and velocity
-        self.pid_control(error, velocity)
+        self.pid_control(self.error, velocity)
         
 def main(args=None):
     rclpy.init(args=args)
