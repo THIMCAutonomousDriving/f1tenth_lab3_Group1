@@ -35,7 +35,7 @@ class WallFollow(Node):
 
         # TODO: store any necessary values you think you'll need
 
-    def get_range(self, range_data, angle): #alex and fiona
+    def get_range(self, range_data: LaserScan, angle): #alex and fiona
         """
         Simple helper to return the corresponding range measurement at a given angle. Make sure you take care of NaNs and infs.
 
@@ -47,13 +47,17 @@ class WallFollow(Node):
             range: range measurement in meters at the given angle
 
         """
-        # angle_increment = self.laser_scan.angle_increment
-        # min_angle = self.laser_scan.min_angle
-        # index = round((angle - min_angle) / angle_increment , 0)
-        # range = laser_scan.ranges[index]
+        angle_increment = range_data.angle_increment
+        min_angle = range_data.angle_min
+        index = round((angle - min_angle) / angle_increment , 0)
+        range = range_data.ranges[index]
+
+        # check for inf and nan
+        if not np.isfinite(range):
+            return 0.0
 
         #TODO: implement
-        return 0.0 # range
+        return range # 
 
     def get_error(self, range_data, dist): #others
         """
