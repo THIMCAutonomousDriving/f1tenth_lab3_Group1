@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import rclpy
 from rclpy.node import Node
 
@@ -19,7 +20,7 @@ class WallFollow(Node):
         
         #Initialized Publisher for the new drive data
         self.publisher_ackermann = self.create_publisher(AckermannDriveStamped, drive_topic, 10)
-        self.laser_scan_subscriber = self.create_subscription(LaserScan, '/scan', 10, self.scan_callback)
+        self.laser_scan_subscriber = self.create_subscription(LaserScan, lidarscan_topic, self.scan_callback, 10)
         
         # TODO: set PID gains
         #Convert to Parameters
@@ -28,8 +29,8 @@ class WallFollow(Node):
         #self.declare_parameter("ki",1.0)
         #self.get_parameter('kp').get_parameter_value().double_value
         self.kp = 0.5
-        self.kd = 0.7
-        self.ki = 1.0
+        self.kd = 0.1
+        self.ki = 0.1
 
         # TODO: store history
         self.integral = 0.0
@@ -55,7 +56,7 @@ class WallFollow(Node):
         """
         angle_increment = range_data.angle_increment
         min_angle = range_data.angle_min
-        index = round((angle - min_angle) / angle_increment , 0)
+        index = int(round((angle - min_angle) / angle_increment , 0))
         range = range_data.ranges[index]
         
         # check for inf and nan
@@ -138,7 +139,7 @@ class WallFollow(Node):
         d = self.kd * ((error - self.prev_error) / (self.time - self.prev_time))
 
         # Combination
-        pid = p + i + d
+        pid = p #+ i + d
         
         angle = 0.0
         angle = pid
