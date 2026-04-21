@@ -130,16 +130,16 @@ class WallFollow(Node):
         
         # I-Part
         #Calculated as: integral + ki * error * delta_time
-        i = self.integral + self.ki * error * (self.time - self.prev_time) # maybe convert to sec 
+        i = self.integral + self.ki * error * (self.time - self.prev_time) / 1e9 # maybe convert to sec 
         self.integral = i #Integral is the accumulated correction/The actual integratet part up until now
         #If necessary implement Wind up filter here.
 
         # D-Part
         #Calculated as: kd * (delta_error / delta_time)
-        d = self.kd * ((error - self.prev_error) / (self.time - self.prev_time))
+        d = self.kd * ((error - self.prev_error) / (self.time - self.prev_time) *1e9)
 
         # Combination
-        pid = p #+ i + d
+        pid = p + i + d
         
         angle = 0.0
         angle = pid
