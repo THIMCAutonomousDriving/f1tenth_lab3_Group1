@@ -24,13 +24,14 @@ class WallFollow(Node):
         
         # TODO: set PID gains
         #Convert to Parameters
-        #self.declare_parameter("kp",0.5)
-        #self.declare_parameter("kd",0.7)
-        #self.declare_parameter("ki",1.0)
-        #self.get_parameter('kp').get_parameter_value().double_value
-        self.kp = 0.5
-        self.kd = 0.1
-        self.ki = 0.1
+        self.declare_parameter("kp",0.5)
+        self.declare_parameter("ki",0.2)
+        self.declare_parameter("kd",0.2)
+
+        self.declare_parameter("desired_distance",1.0)
+        self.declare_parameter("angle_diff",45.0)
+
+        self.declare_parameter("lor", 'left')
 
         # TODO: store history
         self.integral = 0.0
@@ -77,11 +78,15 @@ class WallFollow(Node):
         Returns:
             error: calculated error
         """
+        if self.get_parameter("lor").get_parameter_value().string_value == 'left':
+            self.v = 1
+        else:
+            self.v = -1
 
-        theta = np.deg2rad(45.0) # angle between the two beams
-
-        b_angle = np.deg2rad(90.0) #90 deg angle 
-        a_angle = b_angle - theta   #45 deg angle
+        theta = self.v * np.deg2rad(self.get_parameter("angle_diff").get_parameter_value().double_value)
+        #theta = np.deg2rad(45.0*)
+        b_angle = np.deg2rad(90.0 * self.v) #90 deg angle 
+        a_angle = b_angle - theta  #45 deg angle
 
         a = self.get_range(range_data, a_angle) #distance to whats front left (prob. wall too)
         b = self.get_range(range_data, b_angle) #distance to whats directly on the left (left wall)
@@ -92,13 +97,19 @@ class WallFollow(Node):
 
 
         alpha = np.arctan2(a * np.cos(theta) - b, # estimated wall angle relative to the car
-                        a * np.sin(theta))
+                        a * np.sin(theta)) 
+
+        if self.get_parameter("lor").get_parameter_value().string_value == 'left':
+            
+            Dt = b * np.cos(alpha) # curent distance to wall
+        else:
+            Dt = b * np.cos(alpha + np.deg2rad(180)) # curent distance to wall (dont know why though)
 
 
-        Dt = b * np.cos(alpha) # curent distance to wall
+        #Dt = b * np.cos(alpha) # curent distance to wall
 
         L = 1.0 # lookahead distance
-
+        self.get_logger().info(f"theta: {theta:.2f}; alpha {alpha:.2f}, a: {a:.2f}; b {b:.2f}")
         
         Dt1 = Dt + L * np.sin(alpha) # future projected distance to wall (estimated future distance)
 
@@ -118,11 +129,16 @@ class WallFollow(Node):
         Returns:
             None
         """
-# TODO: Use kp, ki & kd to implement a PID controller 
+        # TODO: Use kp, ki & kd to implement a PID controller 
         #As far as I understand it right now the programm will continously use this function and this serves as the loop
         self.time = range_data.header.stamp.nanosec
 
         pid = 0.0
+
+        self.kp =  self.get_parameter('kp').get_parameter_value().double_value
+        self.ki =  self.get_parameter('ki').get_parameter_value().double_value
+        self.kd =  self.get_parameter('kd').get_parameter_value().double_value
+
 
         # P-Part
         #Calculated as: kp * error
@@ -144,13 +160,13 @@ class WallFollow(Node):
         angle = 0.0
         angle = pid
 
-        #Create AckermannDrive and fill it with anlge and velocity then publish
+        #Create AckermannDrive and fill it with angle and velocity then publish
         drive_msg = AckermannDriveStamped()
         
-        drive_msg.drive.steering_angle = angle
+        drive_msg.drive.steering_angle = angle * self.v
         drive_msg.drive.speed = velocity
 
-        self.get_logger().info(f"Desired velocity set to: {velocity:.2f}; Angle corrected to {angle:.2f}")
+        #self.get_logger().info(f"Desired velocity set to: {velocity:.2f}; Angle corrected to {angle:.2f}")
         self.publisher_ackermann.publish(drive_msg)
 
         #Store history
@@ -169,9 +185,9 @@ class WallFollow(Node):
             None
         """
         # The desired distance to follow (e.g., stay 1.0 meter away from the left wall)
-        desired_distance = 1.0 
-
-        self.error = self.get_error(msg, desired_distance) 
+        self.desired_distance =  self.get_parameter('desired_distance').get_parameter_value().double_value
+        
+        self.error = self.get_error(msg, self.desired_distance) 
 
         # Create a dynamic velocity profile based on the magnitude of the error
 
