@@ -28,7 +28,7 @@ class WallFollow(Node):
         self.declare_parameter("ki",0.2)
         self.declare_parameter("kd",0.2)
 
-        self.declare_parameter("desired_distance",1.0)
+        self.declare_parameter("desired_distance",0.8)
         self.declare_parameter("angle_diff",45.0)
 
         self.declare_parameter("lor", 'left')
@@ -83,13 +83,13 @@ class WallFollow(Node):
         else:
             self.v = -1
 
-        theta = self.v * np.deg2rad(self.get_parameter("angle_diff").get_parameter_value().double_value)
+        theta = np.deg2rad(self.get_parameter("angle_diff").get_parameter_value().double_value)
         #theta = np.deg2rad(45.0*)
-        b_angle = np.deg2rad(90.0 * self.v) #90 deg angle 
-        a_angle = b_angle - theta  #45 deg angle
+        b_angle = np.deg2rad(90.0 * self.v) #90 deg angle, if we want to follow the right wall, make it -90
+        a_angle = b_angle - theta * self.v  #45 deg angle, for right wall, we have to do -90 -(-45)
 
-        a = self.get_range(range_data, a_angle) #distance to whats front left (prob. wall too)
-        b = self.get_range(range_data, b_angle) #distance to whats directly on the left (left wall)
+        a = self.get_range(range_data, a_angle) #distance to whats front left / right (prob. wall too)
+        b = self.get_range(range_data, b_angle) #distance to whats directly on the left / right (wall)
 
         # safety check: returns False if Nan, inf 
         if not np.isfinite(a) or not np.isfinite(b):
@@ -99,26 +99,22 @@ class WallFollow(Node):
         alpha = np.arctan2(a * np.cos(theta) - b, # estimated wall angle relative to the car
                         a * np.sin(theta)) 
 
-        if self.get_parameter("lor").get_parameter_value().string_value == 'left':
-            
-            Dt = b * np.cos(alpha) # curent distance to wall
-        else:
-            Dt = b * np.cos(alpha + np.deg2rad(180)) # curent distance to wall (dont know why though)
-
+        Dt = b * np.cos(alpha) # curent distance to wall
+        
 
         #Dt = b * np.cos(alpha) # curent distance to wall
 
         L = 1.0 # lookahead distance
-        self.get_logger().info(f"theta: {theta:.2f}; alpha {alpha:.2f}, a: {a:.2f}; b {b:.2f}")
+        #self.get_logger().info(f"theta: {theta:.2f}; alpha {alpha:.2f}, a: {a:.2f}; b {b:.2f}")
         
         Dt1 = Dt + L * np.sin(alpha) # future projected distance to wall (estimated future distance)
 
-        # for left wall following: positive error means car is too far from the left wall
+        # positive error means car is too far from the wall
         error = Dt1 - dist # actual d - desired d
 
         return error
 
-    def pid_control(self, error, velocity, range_data: LaserScan): #alex and fiona
+    def pid_control(self, error, velocity, range_data: LaserScan):
         """
         Based on the calculated error, publish vehicle control
 
@@ -174,7 +170,7 @@ class WallFollow(Node):
         self.prev_error = error
 
 
-    def scan_callback(self, msg): #others
+    def scan_callback(self, msg):
         """
         Callback function for LaserScan messages. Calculate the error and publish the drive message in this function.
 
