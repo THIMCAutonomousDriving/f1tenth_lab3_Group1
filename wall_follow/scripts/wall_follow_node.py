@@ -15,23 +15,23 @@ class WallFollow(Node):
 
         lidarscan_topic = '/scan'
         drive_topic = '/drive'
-
-        # TODO: create subscribers and publishers
         
         #Initialized Publisher for the new drive data
         self.publisher_ackermann = self.create_publisher(AckermannDriveStamped, drive_topic, 10)
         self.laser_scan_subscriber = self.create_subscription(LaserScan, lidarscan_topic, self.scan_callback, 10)
         
-        # TODO: set PID gains
-        #Convert to Parameters
-        self.declare_parameter("kp",0.5)
-        self.declare_parameter("ki",0.2)
-        self.declare_parameter("kd",0.2)
+        # TODO: set PID gains 
+
+        self.declare_parameter("kp",1.0)
+        self.declare_parameter("ki",0.5)
+        self.declare_parameter("kd",1.1)
 
         self.declare_parameter("desired_distance",0.8)
-        self.declare_parameter("angle_diff",45.0)
+        self.declare_parameter("angle_diff", 45.0)
+        self.declare_parameter("lookahead", 1.0)
 
         self.declare_parameter("lor", 'left')
+        
 
         # TODO: store history
         self.integral = 0.0
@@ -41,46 +41,25 @@ class WallFollow(Node):
         self.time = 0.0
         self.prev_time = 0.0
 
-        # TODO: store any necessary values you think you'll need
 
     def get_range(self, range_data: LaserScan, angle): #alex and fiona
-        """
-        Simple helper to return the corresponding range measurement at a given angle. Make sure you take care of NaNs and infs.
 
-        Args:
-            range_data: single range array from the LiDAR
-            angle: between angle_min and angle_max of the LiDAR
-
-        Returns:
-            range: range measurement in meters at the given angle
-
-        """
-        angle_increment = range_data.angle_increment
-        min_angle = range_data.angle_min
-        index = int(round((angle - min_angle) / angle_increment , 0))
-        range = range_data.ranges[index]
+        angle_increment = range_data.angle_increment                    # single step in deg
+        min_angle = range_data.angle_min                                # starting angle of lidar
+        index = int(round((angle - min_angle) / angle_increment , 0))   # calc index by finding the needed steps for that angle
+        range = range_data.ranges[index]                                # get the range at that point
         
         # check for inf and nan
         if not np.isfinite(range):
             return 0.0
 
-        #TODO: implement
-        return range # 
+        return range 
 
     def get_error(self, range_data: LaserScan, dist): #others
-        """
-        Calculates the error to the wall. Follow the wall to the left (going counter clockwise in the Levine loop). You potentially will need to use get_range()
 
-        Args:
-            range_data: single range array from the LiDAR
-            dist: desired distance to the wall
-
-        Returns:
-            error: calculated error
-        """
         if self.get_parameter("lor").get_parameter_value().string_value == 'left':
             self.v = 1
-        else:
+        else:                   # check for left or right wall following. map is better or left, so mainly used that
             self.v = -1
 
         theta = np.deg2rad(self.get_parameter("angle_diff").get_parameter_value().double_value)
@@ -103,8 +82,7 @@ class WallFollow(Node):
         
 
         #Dt = b * np.cos(alpha) # curent distance to wall
-
-        L = 1.0 # lookahead distance
+        L = self.get_parameter('lookahead').get_parameter_value().double_value  # lookahead distance
         #self.get_logger().info(f"theta: {theta:.2f}; alpha {alpha:.2f}, a: {a:.2f}; b {b:.2f}")
         
         Dt1 = Dt + L * np.sin(alpha) # future projected distance to wall (estimated future distance)
@@ -115,26 +93,14 @@ class WallFollow(Node):
         return error
 
     def pid_control(self, error, velocity, range_data: LaserScan):
-        """
-        Based on the calculated error, publish vehicle control
 
-        Args:
-            error: calculated error
-            velocity: desired velocity
-
-        Returns:
-            None
-        """
-        # TODO: Use kp, ki & kd to implement a PID controller 
-        #As far as I understand it right now the programm will continously use this function and this serves as the loop
         self.time = range_data.header.stamp.nanosec
 
-        pid = 0.0
+        pid = 0.0 # initialize
 
         self.kp =  self.get_parameter('kp').get_parameter_value().double_value
         self.ki =  self.get_parameter('ki').get_parameter_value().double_value
         self.kd =  self.get_parameter('kd').get_parameter_value().double_value
-
 
         # P-Part
         #Calculated as: kp * error
@@ -144,7 +110,7 @@ class WallFollow(Node):
         #Calculated as: integral + ki * error * delta_time
         i = self.integral + self.ki * error * (self.time - self.prev_time) / 1e9 # maybe convert to sec 
         self.integral = i #Integral is the accumulated correction/The actual integratet part up until now
-        #If necessary implement Wind up filter here.
+        #If necessary implement anti-Wind-up here.
 
         # D-Part
         #Calculated as: kd * (delta_error / delta_time)
@@ -152,7 +118,7 @@ class WallFollow(Node):
 
         # Combination
         pid = p + i + d
-        
+        self.get_logger().info(f"pid was: {pid:.2f}, p was: {p:.2f}, i was: {i:.2f}, d was: {d:.2f},") # use to test
         angle = 0.0
         angle = pid
 
@@ -171,22 +137,13 @@ class WallFollow(Node):
 
 
     def scan_callback(self, msg):
-        """
-        Callback function for LaserScan messages. Calculate the error and publish the drive message in this function.
 
-        Args:
-            msg: Incoming LaserScan message
-
-        Returns:
-            None
-        """
         # The desired distance to follow (e.g., stay 1.0 meter away from the left wall)
         self.desired_distance =  self.get_parameter('desired_distance').get_parameter_value().double_value
         
         self.error = self.get_error(msg, self.desired_distance) 
 
         # Create a dynamic velocity profile based on the magnitude of the error
-
         abs_error = abs(self.error)
 
         if abs_error < 0.1:
