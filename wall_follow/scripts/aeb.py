@@ -48,7 +48,7 @@ class AEB_node(Node):
 
     def teleop_callback(self, msg:Twist):
         self.teleop = msg
-        if self.teleop.linear.x >= 0 & self.stop == True:
+        if self.teleop.linear.x >= 0 and self.stop == True:
             self.ackermann.drive.speed = 0.0
             self.publisher_a.publish(self.ackermann)
         else:
