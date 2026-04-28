@@ -34,10 +34,12 @@ class AEB_node(Node):
 
         # Publisher for Ackermann speed 
         self.publisher_a = self.create_publisher(AckermannDriveStamped, '/drive', 10) # sim
-        #self.publisher_a = self.create_publisher(AckermannDriveStamped, '/teleop', 10) # reality
+        #self.publisher_a = self.create_publisher(AckermannDriveStamped, '/teleop_aeb', 10) # reality
     
-        self.subsciber_teleop = self.create_subscription(Twist, '/cmd_vel', self.teleop_callback, 10) # sim
-    
+        self.subsciber_teleop = self.create_subscription(AckermannDriveStamped, '/cmd_vel', self.teleop_callback, 10) # sim
+        #self.subsciber_teleop = self.create_subscription(AckermannDriveStamped, '/teleop', self.teleop_callback, 10) # reality
+
+
     
     def odom_callback(self, msg): # aus odo subscriber
         # save the received odom message into our own variable that we can access anywhere now
@@ -46,14 +48,15 @@ class AEB_node(Node):
 
     def teleop_callback(self, msg:Twist):
         self.teleop = msg
-        if self.teleop.linear.x < 0:
+        if self.teleop.linear.x >= 0:
+            if self.stop == True:
+                self.ackermann.drive.speed = 0.0
+                self.publisher_a.publish(self.ackermann)
+            else:
+                self.publisher_a.publish(self.teleop) 
+        else:
             self.stop = False
-        self.pub_stop()
-
-
-    def pub_stop(self):
-        if (self.stop == True):
-            self.publisher_a.publish(self.ackermann)
+            self.publisher_a.publish(self.teleop) 
 
 
     def TTC_calc(self, msg: LaserScan):
@@ -95,7 +98,10 @@ class AEB_node(Node):
                 self.get_logger().info(f"had to break: (TTC was: {self.TTC[i]:.2f})", throttle_duration_sec=1.0)
                 #if self.ackermann.drive.speed = 0.0
                 self.stop = True
-                self.pub_stop()
+
+                self.ackermann.drive.speed = 0.0
+                self.publisher_a.publish(self.ackermann)       # do this here once, so its immediate
+
                 
 
 
