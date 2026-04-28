@@ -48,15 +48,12 @@ class AEB_node(Node):
 
     def teleop_callback(self, msg:Twist):
         self.teleop = msg
-        if self.teleop.linear.x >= 0:
-            if self.stop == True:
-                self.ackermann.drive.speed = 0.0
-                self.publisher_a.publish(self.ackermann)
-            else:
-                self.publisher_a.publish(self.teleop) 
+        if self.teleop.linear.x >= 0 & self.stop == True:
+            self.ackermann.drive.speed = 0.0
+            self.publisher_a.publish(self.ackermann)
         else:
             self.stop = False
-            self.publisher_a.publish(self.teleop) 
+            self.publisher_a.publish(self.teleop)
 
 
     def TTC_calc(self, msg: LaserScan):
