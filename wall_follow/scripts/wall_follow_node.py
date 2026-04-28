@@ -32,7 +32,6 @@ class WallFollow(Node):
 
         self.declare_parameter("lor", 'left')
         
-
         # TODO: store history
         self.integral = 0.0
         self.prev_error = 0.0 
