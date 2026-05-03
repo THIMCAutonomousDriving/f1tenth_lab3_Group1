@@ -47,6 +47,7 @@ ament_python_install_package(${PROJECT_NAME})
 install(PROGRAMS
   scripts/wall_follow_node.py
   scripts/aeb.py
+  scripts/reactive_node.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
