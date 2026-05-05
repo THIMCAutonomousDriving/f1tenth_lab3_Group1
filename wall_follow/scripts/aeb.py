@@ -36,7 +36,8 @@ class AEB_node(Node):
         self.publisher_a = self.create_publisher(AckermannDriveStamped, '/drive', 10) # sim
         #self.publisher_a = self.create_publisher(AckermannDriveStamped, '/teleop_aeb', 10) # reality
     
-        self.subsciber_teleop = self.create_subscription(AckermannDriveStamped, '/cmd_vel', self.teleop_callback, 10) # sim
+        #self.subsciber_teleop = self.create_subscription(AckermannDriveStamped, '/cmd_vel', self.teleop_callback, 10) # sim
+        self.subsciber_teleop = self.create_subscription(Twist, '/teleop_key', self.teleop_callback, 10) # sim
         #self.subsciber_teleop = self.create_subscription(AckermannDriveStamped, '/teleop', self.teleop_callback, 10) # reality
 
 
@@ -47,13 +48,16 @@ class AEB_node(Node):
 
 
     def teleop_callback(self, msg:Twist):
+        self.get_logger().info(f"Recieved teleop: (TTC was: {msg})", throttle_duration_sec=1.0)
         self.teleop = msg
         if self.teleop.linear.x >= 0 and self.stop == True:
             self.ackermann.drive.speed = 0.0
             self.publisher_a.publish(self.ackermann)
         else:
             self.stop = False
-            self.publisher_a.publish(self.teleop)
+            self.ackermann.drive.speed = self.teleop.linear.x
+            self.ackermann.drive.steering_angle = self.teleop.angular.z
+            self.publisher_a.publish(self.ackermann)
 
 
     def TTC_calc(self, msg: LaserScan):
