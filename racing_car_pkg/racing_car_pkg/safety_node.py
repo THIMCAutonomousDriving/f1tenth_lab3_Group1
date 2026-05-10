@@ -40,9 +40,8 @@ class AEB_node(Node):
         self.subsciber_teleop = self.create_subscription(Twist, '/teleop_key', self.teleop_callback, 10) # sim
         #self.subsciber_teleop = self.create_subscription(AckermannDriveStamped, '/teleop', self.teleop_callback, 10) # reality
 
-
     
-    def odom_callback(self, msg): # aus odo subscriber
+    def odom_callback(self, msg): # aus odom subscriber
         # save the received odom message into our own variable that we can access anywhere now
         self.odom = msg
 
@@ -103,14 +102,12 @@ class AEB_node(Node):
                 self.ackermann.drive.speed = 0.0
                 self.publisher_a.publish(self.ackermann)       # do this here once, so its immediate
 
-                
-
 
 def main(args=None):
     rclpy.init(args=args)
-    aeb = AEB_node()
-    rclpy.spin(aeb)
-    aeb.destroy_node()
+    safety_node = AEB_node()
+    rclpy.spin(safety_node)
+    safety_node.destroy_node()
     rclpy.shutdown()
 
 

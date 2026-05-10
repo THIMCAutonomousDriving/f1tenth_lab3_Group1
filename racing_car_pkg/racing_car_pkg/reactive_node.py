@@ -16,6 +16,9 @@ class ReactiveFollowGap(Node):
         lidarscan_topic = '/scan'
         drive_topic = '/drive'
 
+        self.subscriber_laser = self.create_subscription(LaserScan, lidarscan_topic, self.lidar_callback, 10)
+        self.publisher_a = self.create_publisher(AckermannDriveStamped, drive_topic, 10) 
+        
         # TODO: Subscribe to LIDAR
         # TODO: Publish to drive
 
@@ -59,7 +62,7 @@ class ReactiveFollowGap(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    print("WallFollow Initialized")
+    print("gap_follow Initialized")
     reactive_node = ReactiveFollowGap()
     rclpy.spin(reactive_node)
 
