@@ -46,10 +46,10 @@ class AEB_node(Node):
             self.subsciber_odo = self.create_subscription(Odometry, '/odom', self.odom_callback, 10) # reality
 
             # Publisher for Ackermann speed 
-            self.publisher_a = self.create_publisher(AckermannDriveStamped, '/teleop', 10) # reality
+            self.publisher_a = self.create_publisher(AckermannDriveStamped, '/drive', 10) # reality
 
             # subscriber for command topic that we let through or not
-            self.subsciber_drive_wf = self.create_subscription(AckermannDriveStamped, 'drive_wf', self.teleop_callback_Ack, 10) 
+            self.subsciber_drive_wf = self.create_subscription(AckermannDriveStamped, '/drive_wf', self.teleop_callback_Ack, 10) 
             self.subsciber_teleop = self.create_subscription(AckermannDriveStamped, '/teleop', self.teleop_callback_Ack)
     
     def odom_callback(self, msg): # aus odom subscriber
