@@ -49,11 +49,8 @@ class AEB_node(Node):
             self.publisher_a = self.create_publisher(AckermannDriveStamped, '/teleop_aeb', 10) # reality
 
             # subscriber for command topic that we let through or not
-            self.subsciber_teleop = self.create_subscription(AckermannDriveStamped, 'drive_wf', self.teleop_callback_Ack, 10) # sim
+            self.subsciber_teleop = self.create_subscription(AckermannDriveStamped, 'drive_wf', self.teleop_callback_Ack, 10) 
             
-            # controller??
-            #self.subsciber_teleop = self.create_subscription(AckermannDriveStamped, '/teleop', self.teleop_callback_reality, 10) # reality
-
     
     def odom_callback(self, msg): # aus odom subscriber
         # save the received odom message into our own variable that we can access anywhere now
