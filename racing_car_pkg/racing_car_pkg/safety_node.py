@@ -16,7 +16,7 @@ class AEB_node(Node):
         
         ### parameter
         # Define parameter for min TTC definieren (in s)
-        self.declare_parameter("min_TTC",0.3)
+        self.declare_parameter("min_TTC",0.7)
 
         self.declare_parameter("sim_or_real", "sim")
 
@@ -62,23 +62,23 @@ class AEB_node(Node):
     def teleop_callback_Ack(self, msg:AckermannDriveStamped):
         self.get_logger().info(f"Recieved Ackermann: {msg})", throttle_duration_sec=5.0)
         self.teleop = msg
-        self.TTC_calc(self)
+        self.TTC_calc()
         if self.teleop.drive.speed >= 0 and self.stop == True:
             self.ackermann.drive.speed = 0.0
             self.publisher_a.publish(self.ackermann)
-            self.get_logger("didnt pass through")
+            #self.get_logger().info("didnt pass through")
         else:
             self.stop = False
             self.ackermann.drive.speed = self.teleop.drive.speed
             self.ackermann.drive.steering_angle = self.teleop.drive.steering_angle
             self.publisher_a.publish(self.ackermann)
-            self.get_logger("did pass through")
+            #self.get_logger().info("did pass through")
 
 
     def teleop_callback_Twist(self, msg:Twist):
         self.get_logger().info(f"Recieved teleop: (TTC was: {msg})", throttle_duration_sec=1.0)
         self.teleop = msg
-        self.TTC_calc(self)
+        self.TTC_calc()
         if self.teleop.linear.x >= 0 and self.stop == True:
             self.ackermann.drive.speed = 0.0
             self.publisher_a.publish(self.ackermann)
@@ -121,7 +121,7 @@ class AEB_node(Node):
 
         # calculating the TTC
         self.TTC = self.np_laser_scan / self.np_range_rate 
-
+        self.get_logger().info(f"(TTC was: {self.TTC})", throttle_duration_sec=1.0)
 
         for i in range (len(self.TTC)):
             if self.TTC[i] < self.get_parameter('min_TTC').get_parameter_value().double_value:
