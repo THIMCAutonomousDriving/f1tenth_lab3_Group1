@@ -29,7 +29,7 @@ class AEB_node(Node):
         # Subscriber for laser scan
         self.subscriber_laser = self.create_subscription(LaserScan, '/scan', self.TTC_calc, 10)
 
-        if self.get_parameter("sim_or_real").get_parameter_value().string_value == 'sim':
+        if self.get_parameter("sim_or_real").get_parameter_value().string_value == 'real':
 
             # Subscriber for odometry
             self.subsciber_odo = self.create_subscription(Odometry, '/ego_racecar/odom', self.odom_callback, 10) # sim
@@ -50,7 +50,7 @@ class AEB_node(Node):
 
             # subscriber for command topic that we let through or not
             self.subsciber_drive_wf = self.create_subscription(AckermannDriveStamped, '/drive_wf', self.teleop_callback_Ack, 10) 
-            self.subsciber_teleop = self.create_subscription(AckermannDriveStamped, '/teleop', self.teleop_callback_Ack)
+            self.subsciber_teleop = self.create_subscription(AckermannDriveStamped, '/teleop', self.teleop_callback_Ack, 10)
     
     def odom_callback(self, msg): # aus odom subscriber
         # save the received odom message into our own variable that we can access anywhere now
