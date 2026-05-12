@@ -38,19 +38,19 @@ class AEB_node(Node):
             self.publisher_a = self.create_publisher(AckermannDriveStamped, '/drive', 10) # sim
 
             # subscriber for command topic that we let through or not
-            self.subsciber_teleop = self.create_subscription(Twist, '/teleop_key', self.teleop_callback_Twist, 10) # sim
-            self.subsciber_teleop = self.create_subscription(AckermannDriveStamped, '/drive_wf', self.teleop_callback_Ack, 10) # sim
+            self.subsciber_teleop_key = self.create_subscription(Twist, '/teleop_key', self.teleop_callback_Twist, 10) # sim
+            self.subsciber_drive_wf_sim = self.create_subscription(AckermannDriveStamped, '/drive_wf', self.teleop_callback_Ack, 10) # sim
 
         else:
             # Subscriber for odometry
             self.subsciber_odo = self.create_subscription(Odometry, '/odom', self.odom_callback, 10) # reality
 
             # Publisher for Ackermann speed 
-            self.publisher_a = self.create_publisher(AckermannDriveStamped, '/teleop_aeb', 10) # reality
+            self.publisher_a = self.create_publisher(AckermannDriveStamped, '/teleop', 10) # reality
 
             # subscriber for command topic that we let through or not
-            self.subsciber_teleop = self.create_subscription(AckermannDriveStamped, 'drive_wf', self.teleop_callback_Ack, 10) 
-            
+            self.subsciber_drive_wf = self.create_subscription(AckermannDriveStamped, 'drive_wf', self.teleop_callback_Ack, 10) 
+            self.subsciber_teleop = self.create_subscription(AckermannDriveStamped, '/teleop', self.teleop_callback_Ack)
     
     def odom_callback(self, msg): # aus odom subscriber
         # save the received odom message into our own variable that we can access anywhere now
@@ -67,6 +67,7 @@ class AEB_node(Node):
             self.ackermann.drive.speed = self.teleop.drive.speed
             self.ackermann.drive.steering_angle = self.teleop.drive.steering_angle
             self.publisher_a.publish(self.ackermann)
+
 
     def teleop_callback_Twist(self, msg:Twist):
         self.get_logger().info(f"Recieved teleop: (TTC was: {msg})", throttle_duration_sec=1.0)

@@ -22,13 +22,13 @@ class WallFollow(Node):
         
         # TODO: set PID gains 
 
-        self.declare_parameter("kp",1.3)
-        self.declare_parameter("ki",0.25)
-        self.declare_parameter("kd",1.5)
+        self.declare_parameter("kp",1.25)
+        self.declare_parameter("ki",0.1)
+        self.declare_parameter("kd",0.1)
 
-        self.declare_parameter("desired_distance",1.0)
-        self.declare_parameter("angle_diff", 45.0)
-        self.declare_parameter("lookahead", 0.9)
+        self.declare_parameter("desired_distance",0.4)
+        self.declare_parameter("angle_diff", 60.0)
+        self.declare_parameter("lookahead", 1.0)
 
         self.declare_parameter("lor", 'left')
         
@@ -107,10 +107,14 @@ class WallFollow(Node):
         
         # I-Part
         #Calculated as: integral + ki * error * delta_time
-        i = self.integral + self.ki * error * (self.time - self.prev_time) / 1e9 # maybe convert to sec 
+        i = self.integral + self.ki * error * (self.time - self.prev_time) / 1e9 # maybe convert to sec         
         self.integral = i #Integral is the accumulated correction/The actual integratet part up until now
         #If necessary implement anti-Wind-up here.
-
+        # anti wind up
+        if self.integral >= 0.5:
+            self.integral = 0.5
+        if self.integral <= -0.5:
+            self.integral = -0.5    
         # D-Part
         #Calculated as: kd * (delta_error / delta_time)
         d = self.kd * ((error - self.prev_error) / (self.time - self.prev_time) *1e9)
