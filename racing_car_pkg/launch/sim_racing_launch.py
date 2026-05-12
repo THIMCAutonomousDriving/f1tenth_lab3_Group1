@@ -4,14 +4,18 @@ from launch_ros.actions import Node
 def generate_launch_description():
     return LaunchDescription([
         Node(
-            package='wall_follow',
-            executable='wall_follow_node.py',
+            package='racing_car_pkg',
+            executable='wall_follow_node',
             name='wall_follow_node'
         ),
         Node(
-            package='wall_follow',
-            executable='aeb.py',
-            name='aeb'
+            package='racing_car_pkg',
+            executable='safety_node',
+            name='safety_node',
+            parameters=[
+                # Setting 'target_frame' to 'base_link'
+                {'sim_or_real': 'sim'},
+            ]
         ),
         #Node(
             #package='teleop_twist_keyboard',

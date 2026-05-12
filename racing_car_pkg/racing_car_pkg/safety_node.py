@@ -18,6 +18,8 @@ class AEB_node(Node):
         # Define parameter for min TTC definieren (in s)
         self.declare_parameter("min_TTC",0.7)
 
+        self.declare_parameter("sim_or_real", "sim")
+
         # Initialize the variables for the subscribers/publishers
         self.laser_scan = LaserScan()
         self.odom = Odometry()
@@ -27,26 +29,49 @@ class AEB_node(Node):
         # Subscriber for laser scan
         self.subscriber_laser = self.create_subscription(LaserScan, '/scan', self.TTC_calc, 10)
 
-        # Subscriber for odometry
-        self.subsciber_odo = self.create_subscription(Odometry, '/ego_racecar/odom', self.odom_callback, 10) # sim
-        #self.subsciber_odo = self.create_subscription(Odometry, '/odom', self.odom_callback, 10) # reality
-        
+        if self.get_parameter("sim_or_real").get_parameter_value().string_value == 'sim':
 
-        # Publisher for Ackermann speed 
-        self.publisher_a = self.create_publisher(AckermannDriveStamped, '/drive', 10) # sim
-        #self.publisher_a = self.create_publisher(AckermannDriveStamped, '/teleop_aeb', 10) # reality
-    
-        #self.subsciber_teleop = self.create_subscription(AckermannDriveStamped, '/cmd_vel', self.teleop_callback, 10) # sim
-        self.subsciber_teleop = self.create_subscription(Twist, '/teleop_key', self.teleop_callback, 10) # sim
-        #self.subsciber_teleop = self.create_subscription(AckermannDriveStamped, '/teleop', self.teleop_callback, 10) # reality
+            # Subscriber for odometry
+            self.subsciber_odo = self.create_subscription(Odometry, '/ego_racecar/odom', self.odom_callback, 10) # sim
+
+            # Publisher for Ackermann speed 
+            self.publisher_a = self.create_publisher(AckermannDriveStamped, '/drive', 10) # sim
+
+            # subscriber for command topic that we let through or not
+            self.subsciber_teleop = self.create_subscription(Twist, '/teleop_key', self.teleop_callback_Twist, 10) # sim
+            self.subsciber_teleop = self.create_subscription(AckermannDriveStamped, '/drive_wf', self.teleop_callback_Ack, 10) # sim
+
+        else:
+            # Subscriber for odometry
+            self.subsciber_odo = self.create_subscription(Odometry, '/odom', self.odom_callback, 10) # reality
+
+            # Publisher for Ackermann speed 
+            self.publisher_a = self.create_publisher(AckermannDriveStamped, '/teleop_aeb', 10) # reality
+
+            # subscriber for command topic that we let through or not
+            self.subsciber_teleop = self.create_subscription(AckermannDriveStamped, 'drive_wf', self.teleop_callback_Ack, 10) # sim
+            
+            # controller??
+            #self.subsciber_teleop = self.create_subscription(AckermannDriveStamped, '/teleop', self.teleop_callback_reality, 10) # reality
 
     
     def odom_callback(self, msg): # aus odom subscriber
         # save the received odom message into our own variable that we can access anywhere now
         self.odom = msg
 
+    def teleop_callback_Ack(self, msg:AckermannDriveStamped):
+        self.get_logger().info(f"Recieved teleop: (TTC was: {msg})", throttle_duration_sec=1.0)
+        self.teleop = msg
+        if self.teleop.drive.speed >= 0 and self.stop == True:
+            self.ackermann.drive.speed = 0.0
+            self.publisher_a.publish(self.ackermann)
+        else:
+            self.stop = False
+            self.ackermann.drive.speed = self.teleop.drive.speed
+            self.ackermann.drive.steering_angle = self.teleop.drive.steering_angle
+            self.publisher_a.publish(self.ackermann)
 
-    def teleop_callback(self, msg:Twist):
+    def teleop_callback_Twist(self, msg:Twist):
         self.get_logger().info(f"Recieved teleop: (TTC was: {msg})", throttle_duration_sec=1.0)
         self.teleop = msg
         if self.teleop.linear.x >= 0 and self.stop == True:

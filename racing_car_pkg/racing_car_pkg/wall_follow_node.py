@@ -14,7 +14,7 @@ class WallFollow(Node):
         super().__init__('wall_follow_node')
 
         lidarscan_topic = '/scan'
-        drive_topic = '/drive'
+        drive_topic = '/drive_wf'
         
         #Initialized Publisher for the new drive data
         self.publisher_ackermann = self.create_publisher(AckermannDriveStamped, drive_topic, 10)
