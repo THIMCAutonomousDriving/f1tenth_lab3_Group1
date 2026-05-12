@@ -23,10 +23,10 @@ class WallFollow(Node):
         # TODO: set PID gains 
 
         self.declare_parameter("kp",1.25)
-        self.declare_parameter("ki",0.1)
+        self.declare_parameter("ki",0.0)
         self.declare_parameter("kd",0.1)
 
-        self.declare_parameter("desired_distance",0.4)
+        self.declare_parameter("desired_distance",0.3)
         self.declare_parameter("angle_diff", 60.0)
         self.declare_parameter("lookahead", 1.0)
 
@@ -121,7 +121,7 @@ class WallFollow(Node):
 
         # Combination
         pid = p + i + d
-        self.get_logger().info(f"pid was: {pid:.2f}, p was: {p:.2f}, i was: {i:.2f}, d was: {d:.2f},") # use to test
+        #self.get_logger().info(f"pid was: {pid:.2f}, p was: {p:.2f}, i was: {i:.2f}, d was: {d:.2f},") # use to test
         angle = 0.0
         angle = pid
 
