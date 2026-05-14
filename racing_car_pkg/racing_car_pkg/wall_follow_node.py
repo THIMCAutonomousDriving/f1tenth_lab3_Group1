@@ -22,13 +22,13 @@ class WallFollow(Node):
         
         # TODO: set PID gains 
 
-        self.declare_parameter("kp",1.25)
-        self.declare_parameter("ki",0.0)
-        self.declare_parameter("kd",0.1)
+        self.declare_parameter("kp",1.3) #sim: 1.3 / real: 1.25
+        self.declare_parameter("ki",0.25) #sim: 0.25 / real: 0.1
+        self.declare_parameter("kd",1.5) #sim: 1.5 / real: 0.1
 
-        self.declare_parameter("desired_distance",0.3)
-        self.declare_parameter("angle_diff", 60.0)
-        self.declare_parameter("lookahead", 1.0)
+        self.declare_parameter("desired_distance",1.0) #sim: 1.0 / 0.4
+        self.declare_parameter("angle_diff", 45.0)  #sim: 45.0 / 60.0
+        self.declare_parameter("lookahead", 0.9) #sim: 0.9 / 1.0
 
         self.declare_parameter("lor", 'left')
         

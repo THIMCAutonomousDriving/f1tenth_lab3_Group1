@@ -27,10 +27,11 @@ class AEB_node(Node):
         self.stop = False
         ### subscriber and publisher
         # Subscriber for laser scan
-        self.subscriber_laser = self.create_subscription(LaserScan, '/scan', self.scan_callback, 10)
+        self.subscriber_laser = self.create_subscription(LaserScan, '/scan', self.TTC_calc, 10)
 
-        if self.get_parameter("sim_or_real").get_parameter_value().string_value == 'real':
+        if self.get_parameter("sim_or_real").get_parameter_value().string_value == 'sim':
 
+            self.get_logger().info("Safety Node startet in configuration: simulation")
             # Subscriber for odometry
             self.subsciber_odo = self.create_subscription(Odometry, '/ego_racecar/odom', self.odom_callback, 10) # sim
 
@@ -42,6 +43,7 @@ class AEB_node(Node):
             self.subsciber_drive_wf_sim = self.create_subscription(AckermannDriveStamped, '/drive_wf', self.teleop_callback_Ack, 10) # sim
 
         else:
+            self.get_logger().info("Safety Node startet in configuration: reality")
             # Subscriber for odometry
             self.subsciber_odo = self.create_subscription(Odometry, '/odom', self.odom_callback, 10) # reality
 
@@ -56,13 +58,12 @@ class AEB_node(Node):
         # save the received odom message into our own variable that we can access anywhere now
         self.odom = msg
 
-    def scan_callback(self, msg):
-        self.laser_scan = msg
+    #def scan_callback(self, msg):
+        #self.laser_scan = msg
 
     def teleop_callback_Ack(self, msg:AckermannDriveStamped):
         self.get_logger().info(f"Recieved Ackermann: {msg})", throttle_duration_sec=5.0)
         self.teleop = msg
-        self.TTC_calc()
         if self.teleop.drive.speed >= 0 and self.stop == True:
             self.ackermann.drive.speed = 0.0
             self.publisher_a.publish(self.ackermann)
@@ -76,9 +77,9 @@ class AEB_node(Node):
 
 
     def teleop_callback_Twist(self, msg:Twist):
-        self.get_logger().info(f"Recieved teleop: (TTC was: {msg})", throttle_duration_sec=1.0)
+        #self.get_logger().info(f"Recieved teleop: {msg})", throttle_duration_sec=1.0)
         self.teleop = msg
-        self.TTC_calc()
+    
         if self.teleop.linear.x >= 0 and self.stop == True:
             self.ackermann.drive.speed = 0.0
             self.publisher_a.publish(self.ackermann)
@@ -89,8 +90,8 @@ class AEB_node(Node):
             self.publisher_a.publish(self.ackermann)
 
 
-    def TTC_calc(self):#, msg: LaserScan):
-        #self.laser_scan = msg
+    def TTC_calc(self, msg: LaserScan):
+        self.laser_scan = msg
         
         # converting to numpy for easier handling
         self.np_range_rate = np.array(self.laser_scan.ranges, copy=True) # initializing range rate with same length, the values will be overwritten,
@@ -121,12 +122,12 @@ class AEB_node(Node):
 
         # calculating the TTC
         self.TTC = self.np_laser_scan / self.np_range_rate 
-        self.get_logger().info(f"(TTC was: {self.TTC})", throttle_duration_sec=1.0)
+        #self.get_logger().info(f"(Range_Rate was: {self.np_range_rate})")
+        #self.get_logger().info(f"(TTC was: {self.TTC})", throttle_duration_sec=1.0)
 
         for i in range (len(self.TTC)):
             if self.TTC[i] < self.get_parameter('min_TTC').get_parameter_value().double_value:
                 self.get_logger().info(f"had to break: (TTC was: {self.TTC[i]:.2f})", throttle_duration_sec=1.0)
-                #if self.ackermann.drive.speed = 0.0
                 self.stop = True
 
                 self.ackermann.drive.speed = 0.0
