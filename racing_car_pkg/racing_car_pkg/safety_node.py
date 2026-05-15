@@ -7,6 +7,7 @@ from nav_msgs.msg import Odometry
 from ackermann_msgs.msg import AckermannDriveStamped
 import numpy as np
 import math
+from std_srvs.srv import Empty
 
 
 class AEB_node(Node):
@@ -25,9 +26,15 @@ class AEB_node(Node):
         self.odom = Odometry()
         self.ackermann = AckermannDriveStamped()
         self.stop = False
+
+
         ### subscriber and publisher
+
         # Subscriber for laser scan
         self.subscriber_laser = self.create_subscription(LaserScan, '/scan', self.TTC_calc, 10)
+
+        #service zum zurücksetzten des bremsstatus
+        self.srv = self.create_service(Empty, 'aeb_reset', self.aeb_reset)
 
         if self.get_parameter("sim_or_real").get_parameter_value().string_value == 'sim':
 
@@ -39,8 +46,11 @@ class AEB_node(Node):
             self.publisher_a = self.create_publisher(AckermannDriveStamped, '/drive', 10) # sim
 
             # subscriber for command topic that we let through or not
-            self.subsciber_teleop_key = self.create_subscription(Twist, '/teleop_key', self.teleop_callback_Twist, 10) # sim
-            self.subsciber_drive_wf_sim = self.create_subscription(AckermannDriveStamped, '/drive_wf', self.teleop_callback_Ack, 10) # sim
+            # command for teleop_key: 
+            # ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args -r cmd_vel:=/teleop_key
+            self.subsciber_teleop_key = self.create_subscription(Twist, '/teleop_key', self.teleop_callback_Twist, 10) # sim        
+            self.subsciber_drive_wf_sim = self.create_subscription(AckermannDriveStamped, '/drive_wf', self.teleop_callback_Ack, 10) # wall follower
+            self.subsciber_drive_gf_sim = self.create_subscription(AckermannDriveStamped, '/drive_gf', self.teleop_callback_Ack, 10) # gap follower
 
         else:
             self.get_logger().info("Safety Node startet in configuration: reality")
@@ -52,39 +62,37 @@ class AEB_node(Node):
 
             # subscriber for command topic that we let through or not
             self.subsciber_drive_wf = self.create_subscription(AckermannDriveStamped, '/drive_wf', self.teleop_callback_Ack, 10) 
+            self.subsciber_drive_gf = self.create_subscription(AckermannDriveStamped, '/drive_gf', self.teleop_callback_Ack, 10) 
             self.subsciber_teleop = self.create_subscription(AckermannDriveStamped, '/teleop', self.teleop_callback_Ack, 10)
     
+    def aeb_reset(self, request, response):
+        self.stop = False
+        return response
+
     def odom_callback(self, msg): # aus odom subscriber
         # save the received odom message into our own variable that we can access anywhere now
         self.odom = msg
 
-    #def scan_callback(self, msg):
-        #self.laser_scan = msg
-
     def teleop_callback_Ack(self, msg:AckermannDriveStamped):
-        self.get_logger().info(f"Recieved Ackermann: {msg})", throttle_duration_sec=5.0)
+        #self.get_logger().info(f"Recieved Ackermann: {msg})", throttle_duration_sec=5.0)
         self.teleop = msg
         if self.teleop.drive.speed >= 0 and self.stop == True:
             self.ackermann.drive.speed = 0.0
-            self.publisher_a.publish(self.ackermann)
-            #self.get_logger().info("didnt pass through")
+            #self.publisher_a.publish(self.ackermann)
         else:
-            self.stop = False
+            #self.stop = False # testweise raus
             self.ackermann.drive.speed = self.teleop.drive.speed
             self.ackermann.drive.steering_angle = self.teleop.drive.steering_angle
             self.publisher_a.publish(self.ackermann)
-            #self.get_logger().info("did pass through")
-
 
     def teleop_callback_Twist(self, msg:Twist):
-        #self.get_logger().info(f"Recieved teleop: {msg})", throttle_duration_sec=1.0)
         self.teleop = msg
     
         if self.teleop.linear.x >= 0 and self.stop == True:
             self.ackermann.drive.speed = 0.0
             self.publisher_a.publish(self.ackermann)
         else:
-            self.stop = False
+            #self.stop = False # testweise raus
             self.ackermann.drive.speed = self.teleop.linear.x
             self.ackermann.drive.steering_angle = self.teleop.angular.z
             self.publisher_a.publish(self.ackermann)
@@ -129,7 +137,6 @@ class AEB_node(Node):
             if self.TTC[i] < self.get_parameter('min_TTC').get_parameter_value().double_value:
                 self.get_logger().info(f"had to break: (TTC was: {self.TTC[i]:.2f})", throttle_duration_sec=1.0)
                 self.stop = True
-
                 self.ackermann.drive.speed = 0.0
                 self.publisher_a.publish(self.ackermann)       # do this here once, so its immediate
 
