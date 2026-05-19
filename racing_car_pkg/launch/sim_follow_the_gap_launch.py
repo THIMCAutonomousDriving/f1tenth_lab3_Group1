@@ -8,7 +8,7 @@ def generate_launch_description():
             executable='reactive_node',
             name='reactive_node',
             parameters=[
-                {'sim_or_real': 'real'},
+                {'sim_or_real': 'sim'},
             ]
         ),
         Node(
@@ -16,7 +16,7 @@ def generate_launch_description():
             executable='safety_node',
             name='safety_node',
             parameters=[
-                {'sim_or_real': 'real'},
+                {'sim_or_real': 'sim'},
             ]
         ),
     ])

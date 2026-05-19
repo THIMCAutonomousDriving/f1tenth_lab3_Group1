@@ -10,23 +10,45 @@ class ReactiveFollowGap(Node):
     def __init__(self):
         super().__init__('reactive_node')
 
-        self.subscription = self.create_subscription(
-            LaserScan, '/scan', self.lidar_callback, 10)
-        self.publisher = self.create_publisher(
-            AckermannDriveStamped, '/drive_gf', 10)
+        lidarscan_topic = '/scan'
+        drive_topic = '/drive_gf'
 
-        self.declare_parameter('bubble_radius', 0.19) #0.2
-        self.declare_parameter('max_range',     5.11) 
-        self.declare_parameter('window_size',   5)
-        self.declare_parameter('weight_far',    0.4)
-        self.declare_parameter('weight_center', 0.6)
-        #setup 1: 1.5 0.7 0.4
-        self.declare_parameter('speed_fast',    1.4) #
-        self.declare_parameter('speed_medium',  0.6) #
-        self.declare_parameter('speed_slow',    0.3) #
-        self.declare_parameter('min_gap_size',  30)
+        # publisher and subscriber:
+        self.subscription = self.create_subscription(LaserScan, lidarscan_topic, self.lidar_callback, 10)
 
-        self.get_logger().info('ReactiveFollowGap node initialized.')
+        self.publisher = self.create_publisher(AckermannDriveStamped, drive_topic, 10)
+
+
+        self.declare_parameter("sim_or_real", "sim")
+
+        if self.get_parameter("sim_or_real").get_parameter_value().string_value == 'sim':
+            self.declare_parameter('bubble_radius', 0.19) #0.2
+            self.declare_parameter('max_range',     5.11) 
+            self.declare_parameter('window_size',   5)
+            self.declare_parameter('weight_far',    0.4)
+            self.declare_parameter('weight_center', 0.6)
+            #setup 1: 1.5 0.7 0.4
+            self.declare_parameter('speed_fast',    1.4) #
+            self.declare_parameter('speed_medium',  0.6) #
+            self.declare_parameter('speed_slow',    0.3) #
+            self.declare_parameter('min_gap_size',  30)
+
+            self.get_logger().info('ReactiveFollowGap node initialized in sim mode.')
+
+        else:
+            self.declare_parameter('bubble_radius', 0.19) #0.2
+            self.declare_parameter('max_range',     5.11) 
+            self.declare_parameter('window_size',   5)
+            self.declare_parameter('weight_far',    0.4)
+            self.declare_parameter('weight_center', 0.6)
+            #setup 1: 1.5 0.7 0.4
+            self.declare_parameter('speed_fast',    1.4) #
+            self.declare_parameter('speed_medium',  0.6) #
+            self.declare_parameter('speed_slow',    0.3) #
+            self.declare_parameter('min_gap_size',  30)
+
+            self.get_logger().info('ReactiveFollowGap node initialized in real mode.')
+
 
     def preprocess_lidar(self, ranges):
         max_range   = self.get_parameter('max_range').get_parameter_value().double_value
