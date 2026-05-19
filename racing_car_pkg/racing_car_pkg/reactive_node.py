@@ -18,6 +18,7 @@ class ReactiveFollowGap(Node):
 
         self.publisher = self.create_publisher(AckermannDriveStamped, drive_topic, 10)
 
+        self.debug_publisher = self.create_publisher(LaserScan, 'debug_lidar', 10)
 
         self.declare_parameter("sim_or_real", "sim")
 
@@ -110,7 +111,7 @@ class ReactiveFollowGap(Node):
         return proc_ranges, closest_idx
 
     def find_max_gap(self, free_space_ranges, angles):
-        best_start, best_end = 0, 0
+        best_start, best_end = 0,0
         cur_start            = None
         best_score           = -np.inf
 
@@ -193,6 +194,17 @@ class ReactiveFollowGap(Node):
             return
 
         best_i     = self.find_best_point(start_i, end_i, proc_ranges)
+
+        #### debug test ######
+
+        new_ranges = data
+        for i in range(len(new_ranges.ranges)):
+            if i != best_i:
+                new_ranges.ranges[i] = 0 
+        self.debug_publisher.publish(new_ranges)
+
+        #### debug test end ######
+
         best_angle = angle_min + best_i * angle_increment
 
         steer = float(np.clip(best_angle, -0.35, 0.35))

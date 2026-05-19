@@ -51,7 +51,7 @@ class AEB_node(Node):
 
             ### parameter
             # Define parameter for min TTC definieren (in s)
-            self.declare_parameter("min_TTC",0.7)
+            self.declare_parameter("min_TTC",0.35)
 
         else:
             self.get_logger().info("Safety Node startet in configuration: reality")
