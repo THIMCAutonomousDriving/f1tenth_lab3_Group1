@@ -15,9 +15,6 @@ class AEB_node(Node):
         # Initialize node with a name
         super().__init__('safety_node')
         
-        ### parameter
-        # Define parameter for min TTC definieren (in s)
-        self.declare_parameter("min_TTC",0.7)
 
         self.declare_parameter("sim_or_real", "sim")
 
@@ -52,6 +49,10 @@ class AEB_node(Node):
             self.subsciber_drive_wf_sim = self.create_subscription(AckermannDriveStamped, '/drive_wf', self.teleop_callback_Ack, 10) # wall follower
             self.subsciber_drive_gf_sim = self.create_subscription(AckermannDriveStamped, '/drive_gf', self.teleop_callback_Ack, 10) # gap follower
 
+            ### parameter
+            # Define parameter for min TTC definieren (in s)
+            self.declare_parameter("min_TTC",0.7)
+
         else:
             self.get_logger().info("Safety Node startet in configuration: reality")
             # Subscriber for odometry
@@ -64,7 +65,11 @@ class AEB_node(Node):
             self.subsciber_drive_wf = self.create_subscription(AckermannDriveStamped, '/drive_wf', self.teleop_callback_Ack, 10) 
             self.subsciber_drive_gf = self.create_subscription(AckermannDriveStamped, '/drive_gf', self.teleop_callback_Ack, 10) 
             self.subsciber_teleop = self.create_subscription(AckermannDriveStamped, '/teleop', self.teleop_callback_Ack, 10)
-    
+
+            ### parameter
+            # Define parameter for min TTC definieren (in s)
+            self.declare_parameter("min_TTC",0.4)
+
     def aeb_reset(self, request, response):
         self.stop = False
         return response
@@ -108,7 +113,7 @@ class AEB_node(Node):
         
 
         ### dealing with inf, nan and out of range values
-        self.min_value = 0.01 # too small value, that would have to be a mistake, so we will set it to a max range (haS to be checked with the real car)
+        self.min_value = 0.15 # too small value, that would have to be a mistake, so we will set it to a max range (haS to be checked with the real car)
         self.max_value = 25 # biggest value, that could realistically occur (we set all the mistakes to this value, so we wont run into problems when calculating while also not accidentally braking)
         
         # checking for inf and nan + replacing it 

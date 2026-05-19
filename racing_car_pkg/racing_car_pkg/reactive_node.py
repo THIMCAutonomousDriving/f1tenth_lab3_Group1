@@ -37,14 +37,14 @@ class ReactiveFollowGap(Node):
 
         else:
             self.declare_parameter('bubble_radius', 0.19) #0.2
-            self.declare_parameter('max_range',     5.11) 
+            self.declare_parameter('max_range',     4.0) 
             self.declare_parameter('window_size',   5)
             self.declare_parameter('weight_far',    0.4)
             self.declare_parameter('weight_center', 0.6)
             #setup 1: 1.5 0.7 0.4
             self.declare_parameter('speed_fast',    1.4) #
-            self.declare_parameter('speed_medium',  0.6) #
-            self.declare_parameter('speed_slow',    0.3) #
+            self.declare_parameter('speed_medium',  0.9) #
+            self.declare_parameter('speed_slow',    0.6) #
             self.declare_parameter('min_gap_size',  30)
 
             self.get_logger().info('ReactiveFollowGap node initialized in real mode.')
