@@ -38,15 +38,17 @@ class ReactiveFollowGap(Node):
 
         else:
             self.declare_parameter('bubble_radius', 0.19) #0.2
-            self.declare_parameter('max_range',     4.0) 
-            self.declare_parameter('window_size',   5)
+            self.declare_parameter('max_range',     5.30) 
+            self.declare_parameter('window_size',   7)
             self.declare_parameter('weight_far',    0.4)
             self.declare_parameter('weight_center', 0.6)
             #setup 1: 1.5 0.7 0.4
             self.declare_parameter('speed_fast',    1.4) #
-            self.declare_parameter('speed_medium',  0.9) #
-            self.declare_parameter('speed_slow',    0.6) #
-            self.declare_parameter('min_gap_size',  30)
+            self.declare_parameter('speed_medium_fast',  1.0) #
+            self.declare_parameter('speed_medium',  0.6) #
+            self.declare_parameter('speed_medium_slow',  0.4) #
+            self.declare_parameter('speed_slow',    0.3) #
+            self.declare_parameter('min_gap_size',  25)
 
             self.get_logger().info('ReactiveFollowGap node initialized in real mode.')
 
@@ -211,13 +213,19 @@ class ReactiveFollowGap(Node):
 
         abs_steer    = abs(steer)
         speed_fast   = self.get_parameter('speed_fast').get_parameter_value().double_value
+        speed_medium_fast = self.get_parameter('speed_medium_fast').get_parameter_value().double_value
         speed_medium = self.get_parameter('speed_medium').get_parameter_value().double_value
+        speed_medium_slow = self.get_parameter('speed_medium_slow').get_parameter_value().double_value
         speed_slow   = self.get_parameter('speed_slow').get_parameter_value().double_value
 
-        if abs_steer < 0.1:
+        if abs_steer < 0.15:
             velocity = speed_fast
         elif abs_steer < 0.2:
+            velocity = speed_medium_fast
+        elif abs_steer < 0.25:
             velocity = speed_medium
+        elif abs_steer < 0.3:
+            velocity = speed_medium_slow
         else:
             velocity = speed_slow
 
