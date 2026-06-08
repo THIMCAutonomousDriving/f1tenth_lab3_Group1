@@ -4,6 +4,7 @@ from rclpy.node import Node
 import numpy as np
 from sensor_msgs.msg import LaserScan
 from ackermann_msgs.msg import AckermannDriveStamped
+from std_msgs.msg import Bool
 
 
 class ReactiveFollowGap(Node):
@@ -11,7 +12,7 @@ class ReactiveFollowGap(Node):
         super().__init__('reactive_node')
 
         lidarscan_topic = '/scan'
-        drive_topic = '/drive_gf'
+        drive_topic = '/drive'
 
         # publisher and subscriber:
         self.subscription = self.create_subscription(LaserScan, lidarscan_topic, self.lidar_callback, 10)
@@ -20,7 +21,11 @@ class ReactiveFollowGap(Node):
 
         self.debug_publisher = self.create_publisher(LaserScan, 'debug_lidar', 10)
 
+        self.subscriber_aeb = self.create_subscription(Bool, 'aeb_stop', self.stop_callback, 10)
+
         self.declare_parameter("sim_or_real", "sim")
+
+        self.status = False
 
         if self.get_parameter("sim_or_real").get_parameter_value().string_value == 'sim':
             self.declare_parameter('bubble_radius', 0.19) #0.2
@@ -30,7 +35,9 @@ class ReactiveFollowGap(Node):
             self.declare_parameter('weight_center', 0.6)
             #setup 1: 1.5 0.7 0.4
             self.declare_parameter('speed_fast',    1.4) #
+            self.declare_parameter('speed_medium_fast',  1.0) #
             self.declare_parameter('speed_medium',  0.6) #
+            self.declare_parameter('speed_medium_slow',  0.4) #
             self.declare_parameter('speed_slow',    0.3) #
             self.declare_parameter('min_gap_size',  30)
 
@@ -51,6 +58,10 @@ class ReactiveFollowGap(Node):
             self.declare_parameter('min_gap_size',  25)
 
             self.get_logger().info('ReactiveFollowGap node initialized in real mode.')
+
+
+    def stop_callback(self, msg): # aus odom subscriber
+        self.status = msg.data
 
 
     def preprocess_lidar(self, ranges):
@@ -232,7 +243,11 @@ class ReactiveFollowGap(Node):
         drive_msg = AckermannDriveStamped()
         drive_msg.drive.steering_angle = steer
         drive_msg.drive.speed          = velocity
-        self.publisher.publish(drive_msg)
+        if self.status == False:
+            self.publisher.publish(drive_msg)
+        else:
+            drive_msg.drive.speed = 0.0
+            self.publisher.publish(drive_msg)
 
 
 def main(args=None):

@@ -5,6 +5,7 @@ from geometry_msgs.msg import Twist, Pose2D
 from sensor_msgs.msg import LaserScan
 from nav_msgs.msg import Odometry
 from ackermann_msgs.msg import AckermannDriveStamped
+from std_msgs.msg import Bool
 import numpy as np
 import math
 from std_srvs.srv import Empty
@@ -22,6 +23,7 @@ class AEB_node(Node):
         self.laser_scan = LaserScan()
         self.odom = Odometry()
         self.ackermann = AckermannDriveStamped()
+        self.stop_msg = Bool()
         self.stop = False
 
 
@@ -32,6 +34,9 @@ class AEB_node(Node):
 
         #service zum zurücksetzten des bremsstatus
         self.srv = self.create_service(Empty, 'aeb_reset', self.aeb_reset)
+
+        # Publisher für Drivestatus
+        self.publisher_b = self.create_publisher(Bool, '/aeb_stop', 10)
 
         if self.get_parameter("sim_or_real").get_parameter_value().string_value == 'sim':
 
@@ -45,9 +50,9 @@ class AEB_node(Node):
             # subscriber for command topic that we let through or not
             # command for teleop_key: 
             # ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args -r cmd_vel:=/teleop_key
-            self.subsciber_teleop_key = self.create_subscription(Twist, '/teleop_key', self.teleop_callback_Twist, 10) # sim        
-            self.subsciber_drive_wf_sim = self.create_subscription(AckermannDriveStamped, '/drive_wf', self.teleop_callback_Ack, 10) # wall follower
-            self.subsciber_drive_gf_sim = self.create_subscription(AckermannDriveStamped, '/drive_gf', self.teleop_callback_Ack, 10) # gap follower
+            #self.subsciber_teleop_key = self.create_subscription(Twist, '/teleop_key', self.teleop_callback_Twist, 10) # sim        
+            #self.subsciber_drive_wf_sim = self.create_subscription(AckermannDriveStamped, '/drive_wf', self.teleop_callback_Ack, 10) # wall follower
+            #self.subsciber_drive_gf_sim = self.create_subscription(AckermannDriveStamped, '/drive_gf', self.teleop_callback_Ack, 10) # gap follower
 
             ### parameter
             # Define parameter for min TTC definieren (in s)
@@ -62,9 +67,9 @@ class AEB_node(Node):
             self.publisher_a = self.create_publisher(AckermannDriveStamped, '/drive', 10) # reality
 
             # subscriber for command topic that we let through or not
-            self.subsciber_drive_wf = self.create_subscription(AckermannDriveStamped, '/drive_wf', self.teleop_callback_Ack, 10) 
-            self.subsciber_drive_gf = self.create_subscription(AckermannDriveStamped, '/drive_gf', self.teleop_callback_Ack, 10) 
-            self.subsciber_teleop = self.create_subscription(AckermannDriveStamped, '/teleop', self.teleop_callback_Ack, 10)
+            #self.subsciber_drive_wf = self.create_subscription(AckermannDriveStamped, '/drive_wf', self.teleop_callback_Ack, 10) 
+            #self.subsciber_drive_gf = self.create_subscription(AckermannDriveStamped, '/drive_gf', self.teleop_callback_Ack, 10) 
+            #self.subsciber_teleop = self.create_subscription(AckermannDriveStamped, '/teleop', self.teleop_callback_Ack, 10)
 
             ### parameter
             # Define parameter for min TTC definieren (in s)
@@ -72,6 +77,8 @@ class AEB_node(Node):
 
     def aeb_reset(self, request, response):
         self.stop = False
+        self.stop_msg.data = self.stop
+        self.publisher_b.publish(self.stop_msg)
         return response
 
     def odom_callback(self, msg): # aus odom subscriber
@@ -142,8 +149,10 @@ class AEB_node(Node):
             if self.TTC[i] < self.get_parameter('min_TTC').get_parameter_value().double_value:
                 self.get_logger().info(f"had to break: (TTC was: {self.TTC[i]:.2f})", throttle_duration_sec=1.0)
                 self.stop = True
-                self.ackermann.drive.speed = 0.0
-                self.publisher_a.publish(self.ackermann)       # do this here once, so its immediate
+                self.stop_msg.data = self.stop
+                self.publisher_b.publish(self.stop_msg)
+                #self.ackermann.drive.speed = 0.0
+                #self.publisher_a.publish(self.ackermann)       # do this here once, so its immediate
 
 
 def main(args=None):
