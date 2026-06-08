@@ -83,7 +83,7 @@ class AEB_node(Node):
         self.teleop = msg
         if self.teleop.drive.speed >= 0 and self.stop == True:
             self.ackermann.drive.speed = 0.0
-            #self.publisher_a.publish(self.ackermann)
+            self.publisher_a.publish(self.ackermann)
         else:
             #self.stop = False # testweise raus
             self.ackermann.drive.speed = self.teleop.drive.speed
