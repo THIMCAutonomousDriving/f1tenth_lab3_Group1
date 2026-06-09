@@ -73,7 +73,7 @@ class AEB_node(Node):
 
             ### parameter
             # Define parameter for min TTC definieren (in s)
-            self.declare_parameter("min_TTC",0.4)
+            self.declare_parameter("min_TTC",0.5)
 
     def aeb_reset(self, request, response):
         self.stop = False
