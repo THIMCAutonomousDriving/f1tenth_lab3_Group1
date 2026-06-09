@@ -154,9 +154,10 @@ class AEB_node(Node):
                 #self.ackermann.drive.speed = 0.0
                 #self.publisher_a.publish(self.ackermann)       # do this here once, so its immediate
             else: 
-                self.stop = False
-                self.stop_msg.data = self.stop
-                self.publisher_b.publish(self.stop_msg)
+                if self.stop == False:
+                    #self.stop = False
+                    self.stop_msg.data = self.stop
+                    self.publisher_b.publish(self.stop_msg)
 
 
 def main(args=None):
