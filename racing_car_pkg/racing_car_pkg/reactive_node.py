@@ -12,7 +12,7 @@ class ReactiveFollowGap(Node):
         super().__init__('reactive_node')
 
         lidarscan_topic = '/scan'
-        drive_topic = '/drive'
+        drive_topic = '/drive_gf'
 
         # publisher and subscriber:
         self.subscription = self.create_subscription(LaserScan, lidarscan_topic, self.lidar_callback, 10)
@@ -243,12 +243,12 @@ class ReactiveFollowGap(Node):
         drive_msg = AckermannDriveStamped()
         drive_msg.drive.steering_angle = steer
         drive_msg.drive.speed          = velocity
-        if self.status == False:
-            self.publisher.publish(drive_msg)
-        else:
-            drive_msg.drive.speed = 0.0
-            self.publisher.publish(drive_msg)
-
+        #if self.status == False:
+         #   self.publisher.publish(drive_msg)
+        #else:
+        #    drive_msg.drive.speed = 0.0
+         #   self.publisher.publish(drive_msg)
+        self.publisher.publish(drive_msg)
 
 def main(args=None):
     rclpy.init(args=args)

@@ -52,7 +52,7 @@ class AEB_node(Node):
             # ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args -r cmd_vel:=/teleop_key
             #self.subsciber_teleop_key = self.create_subscription(Twist, '/teleop_key', self.teleop_callback_Twist, 10) # sim        
             #self.subsciber_drive_wf_sim = self.create_subscription(AckermannDriveStamped, '/drive_wf', self.teleop_callback_Ack, 10) # wall follower
-            #self.subsciber_drive_gf_sim = self.create_subscription(AckermannDriveStamped, '/drive_gf', self.teleop_callback_Ack, 10) # gap follower
+            self.subsciber_drive_gf_sim = self.create_subscription(AckermannDriveStamped, '/drive_gf', self.teleop_callback_Ack, 10) # gap follower
 
             ### parameter
             # Define parameter for min TTC definieren (in s)
@@ -68,7 +68,7 @@ class AEB_node(Node):
 
             # subscriber for command topic that we let through or not
             #self.subsciber_drive_wf = self.create_subscription(AckermannDriveStamped, '/drive_wf', self.teleop_callback_Ack, 10) 
-            #self.subsciber_drive_gf = self.create_subscription(AckermannDriveStamped, '/drive_gf', self.teleop_callback_Ack, 10) 
+            self.subsciber_drive_gf = self.create_subscription(AckermannDriveStamped, '/drive_gf', self.teleop_callback_Ack, 10) 
             #self.subsciber_teleop = self.create_subscription(AckermannDriveStamped, '/teleop', self.teleop_callback_Ack, 10)
 
             ### parameter
