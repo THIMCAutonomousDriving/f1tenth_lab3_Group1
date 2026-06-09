@@ -52,9 +52,9 @@ class ReactiveFollowGap(Node):
             #setup 1: 1.5 0.7 0.4
             self.declare_parameter('speed_fast',    1.4) #
             self.declare_parameter('speed_medium_fast',  1.0) #
-            self.declare_parameter('speed_medium',  0.6) #
-            self.declare_parameter('speed_medium_slow',  0.4) #
-            self.declare_parameter('speed_slow',    0.3) #
+            self.declare_parameter('speed_medium',  0.8) #
+            self.declare_parameter('speed_medium_slow',  0.7) #
+            self.declare_parameter('speed_slow',    0.5) #
             self.declare_parameter('min_gap_size',  25)
 
             self.get_logger().info('ReactiveFollowGap node initialized in real mode.')
