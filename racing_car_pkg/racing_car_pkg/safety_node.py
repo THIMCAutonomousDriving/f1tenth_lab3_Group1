@@ -50,8 +50,8 @@ class AEB_node(Node):
             # subscriber for command topic that we let through or not
             # command for teleop_key: 
             # ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args -r cmd_vel:=/teleop_key
-            self.subsciber_teleop_key = self.create_subscription(Twist, '/teleop_key', self.teleop_callback_Twist, 10) # sim        
-            self.subsciber_drive_wf_sim = self.create_subscription(AckermannDriveStamped, '/drive_wf', self.teleop_callback_Ack, 10) # wall follower
+            #self.subsciber_teleop_key = self.create_subscription(Twist, '/teleop_key', self.teleop_callback_Twist, 10) # sim        
+            #self.subsciber_drive_wf_sim = self.create_subscription(AckermannDriveStamped, '/drive_wf', self.teleop_callback_Ack, 10) # wall follower
             self.subsciber_drive_gf_sim = self.create_subscription(AckermannDriveStamped, '/drive_gf', self.teleop_callback_Ack, 10) # gap follower
 
             ### parameter
@@ -68,12 +68,12 @@ class AEB_node(Node):
 
             # subscriber for command topic that we let through or not
             #self.subsciber_drive_wf = self.create_subscription(AckermannDriveStamped, '/drive_wf', self.teleop_callback_Ack, 10) 
-            #self.subsciber_drive_gf = self.create_subscription(AckermannDriveStamped, '/drive_gf', self.teleop_callback_Ack, 10) 
+            self.subsciber_drive_gf = self.create_subscription(AckermannDriveStamped, '/drive_gf', self.teleop_callback_Ack, 10) 
             #self.subsciber_teleop = self.create_subscription(AckermannDriveStamped, '/teleop', self.teleop_callback_Ack, 10)
 
             ### parameter
             # Define parameter for min TTC definieren (in s)
-            self.declare_parameter("min_TTC",0.4)
+            self.declare_parameter("min_TTC",0.5)
 
     def aeb_reset(self, request, response):
         self.stop = False
@@ -114,11 +114,9 @@ class AEB_node(Node):
         self.laser_scan = msg
         
         # converting to numpy for easier handling
-        self.np_range_rate = np.array(self.laser_scan.ranges, copy=True) # initializing range rate with same length, the values will be overwritten,
         self.np_laser_scan = np.array(self.laser_scan.ranges, copy=True) # Convert the array to np so it can be calculated easier
         #important that the copy is done like this otherwise copy and original arrays will be changed at the same time
         
-
         ### dealing with inf, nan and out of range values
         self.min_value = 0.15 # too small value, that would have to be a mistake, so we will set it to a max range (haS to be checked with the real car)
         self.max_value = 25 # biggest value, that could realistically occur (we set all the mistakes to this value, so we wont run into problems when calculating while also not accidentally braking)
@@ -128,33 +126,36 @@ class AEB_node(Node):
         # replacing everything unrealistically small with the max value
         self.np_laser_scan = np.where(self.np_laser_scan < self.min_value, self.max_value, self.np_laser_scan)
         
+        ### Calculating range rate via velocity (Vectorized)
+        angles = self.laser_scan.angle_min + self.laser_scan.angle_increment * np.arange(len(self.np_laser_scan))
+        linear_x = self.odom.twist.twist.linear.x
+        
+        # range rate = - linear vel * cos (angle)
+        self.np_range_rate = np.round(-linear_x * np.cos(angles), 5)
 
-        ### Calculating range rate via velocity
-        for i in range (len(self.np_range_rate)):
-            # range rate = - linear vel * cos (angle)
-            self.np_range_rate[i] = round(- self.odom.twist.twist.linear.x * math.cos(self.laser_scan.angle_min + self.laser_scan.angle_increment * i), 5)
-
-        #negate the range rate and then cut off the negatives (according to the formula)
-        for i in range (len(self.np_range_rate)):
-            self.np_range_rate[i] = -self.np_range_rate[i]
-            if self.np_range_rate[i] <= 0:
-                self.np_range_rate[i] = 0.001 # just so it isnt 0 and the ttc therefore inf
+        # negate the range rate and then cut off the negatives (according to the formula)
+        self.np_range_rate = -self.np_range_rate
+        self.np_range_rate = np.where(self.np_range_rate <= 0, 0.001, self.np_range_rate) # just so it isnt 0 and the ttc therefore inf
 
         # calculating the TTC
         self.TTC = self.np_laser_scan / self.np_range_rate 
+        
         #self.get_logger().info(f"(Range_Rate was: {self.np_range_rate})")
         #self.get_logger().info(f"(TTC was: {self.TTC})", throttle_duration_sec=1.0)
 
-        for i in range (len(self.TTC)):
-            if self.TTC[i] < self.get_parameter('min_TTC').get_parameter_value().double_value:
-                self.get_logger().info(f"had to break: (TTC was: {self.TTC[i]:.2f})", throttle_duration_sec=1.0)
-                self.stop = True
-                self.stop_msg.data = self.stop
-                self.publisher_b.publish(self.stop_msg)
-                #self.ackermann.drive.speed = 0.0
-                #self.publisher_a.publish(self.ackermann)       # do this here once, so its immediate
-            else: 
-                self.stop = False
+        # Evaluating min TTC threshold (Vectorized)
+        min_ttc = self.get_parameter('min_TTC').get_parameter_value().double_value
+        violations = np.where(self.TTC < min_ttc)[0]
+
+        if len(violations) > 0:
+            first_idx = violations[0]
+            self.get_logger().info(f"had to break: (TTC was: {self.TTC[first_idx]:.2f})", throttle_duration_sec=1.0)
+            self.stop = True
+            self.stop_msg.data = self.stop
+            self.publisher_b.publish(self.stop_msg)    
+        else: 
+            if self.stop == False:
+                #self.stop = False
                 self.stop_msg.data = self.stop
                 self.publisher_b.publish(self.stop_msg)
 
