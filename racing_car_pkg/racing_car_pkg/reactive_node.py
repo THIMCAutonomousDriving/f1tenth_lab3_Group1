@@ -50,11 +50,11 @@ class ReactiveFollowGap(Node):
             self.declare_parameter('weight_far',    0.4)
             self.declare_parameter('weight_center', 0.6)
             #setup 1: 1.5 0.7 0.4
-            self.declare_parameter('speed_fast',    1.9) #
-            self.declare_parameter('speed_medium_fast',  1.6) #
-            self.declare_parameter('speed_medium',  1.4) #
-            self.declare_parameter('speed_medium_slow',  1.2) #
-            self.declare_parameter('speed_slow',    1.0) #
+            self.declare_parameter('speed_fast',    2.5) #
+            self.declare_parameter('speed_medium_fast',  2.0) #
+            self.declare_parameter('speed_medium',  1.8) #
+            self.declare_parameter('speed_medium_slow',  1.6) #
+            self.declare_parameter('speed_slow',    1.4) #
             self.declare_parameter('min_gap_size',  25)
 
             self.get_logger().info('ReactiveFollowGap node initialized in real mode.')
@@ -198,11 +198,16 @@ class ReactiveFollowGap(Node):
 
         start_i, end_i = self.find_max_gap(proc_ranges, angles)
 
-        if end_i - start_i < min_gap_size:
+        gap_ranges = proc_ranges[start_i:end_i + 1]
+        max_depth = np.max(gap_ranges) if len(gap_ranges) > 0 else 0.0
+        min_safe_depth = 1.5
+
+
+        if end_i - start_i < min_gap_size or (max_depth < min_safe_depth):
             self.get_logger().warn('Gap too narrow, dropping to crawl speed.')
             drive_msg = AckermannDriveStamped()
             drive_msg.drive.steering_angle = 0.0
-            drive_msg.drive.speed          = 0.5
+            drive_msg.drive.speed          = 0.0
             self.publisher.publish(drive_msg)
             return
 
