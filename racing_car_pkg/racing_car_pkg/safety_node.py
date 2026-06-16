@@ -129,7 +129,9 @@ class AEB_node(Node):
         ### Calculating range rate via velocity (Vectorized)
         angles = self.laser_scan.angle_min + self.laser_scan.angle_increment * np.arange(len(self.np_laser_scan))
         linear_x = self.odom.twist.twist.linear.x
+        angular = self.odom.twist.twist.angular.z
         
+
         # range rate = - linear vel * cos (angle)
         self.np_range_rate = np.round(-linear_x * np.cos(angles), 5)
 
