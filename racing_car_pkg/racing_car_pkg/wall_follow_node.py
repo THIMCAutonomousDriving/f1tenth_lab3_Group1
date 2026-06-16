@@ -19,6 +19,9 @@ class WallFollow(Node):
         #Initialized Publisher for the new drive data
         self.publisher_ackermann = self.create_publisher(AckermannDriveStamped, drive_topic, 10)
         self.laser_scan_subscriber = self.create_subscription(LaserScan, lidarscan_topic, self.scan_callback, 10)
+
+        # Initializing the Debug Laserscan
+        self.debug_publisher = self.create_publisher(LaserScan, 'debug_lidar', 10)
         
         
         self.declare_parameter("sim_or_real", "sim")
@@ -67,9 +70,9 @@ class WallFollow(Node):
         
         # check for inf and nan
         if not np.isfinite(range):
-            return 0.0
+            return 0.0, index
 
-        return range 
+        return range, index
 
     def get_error(self, range_data: LaserScan, dist): #others
 
@@ -83,8 +86,17 @@ class WallFollow(Node):
         b_angle = np.deg2rad(90.0 * self.v) #90 deg angle, if we want to follow the right wall, make it -90
         a_angle = b_angle - theta * self.v  #45 deg angle, for right wall, we have to do -90 -(-45)
 
-        a = self.get_range(range_data, a_angle) #distance to whats front left / right (prob. wall too)
-        b = self.get_range(range_data, b_angle) #distance to whats directly on the left / right (wall)
+        a, a_index = self.get_range(range_data, a_angle) #distance to whats front left / right (prob. wall too)
+        b, b_index = self.get_range(range_data, b_angle) #distance to whats directly on the left / right (wall)
+
+        ### DEBUG LIDAR TEST ### - start
+        new_ranges = range_data
+        for i in range(len(new_ranges.ranges)):
+            if i != a_index and i != b_index:
+                new_ranges.ranges[i] = 0
+        self.debug_publisher.publish(new_ranges)
+
+        ### DEBUG LIDAR TEST ### - end
 
         # safety check: returns False if Nan, inf 
         if not np.isfinite(a) or not np.isfinite(b):
@@ -146,7 +158,7 @@ class WallFollow(Node):
         drive_msg = AckermannDriveStamped()
         
         drive_msg.drive.steering_angle = angle * self.v
-        drive_msg.drive.speed = velocity
+        drive_msg.drive.speed = 0.0
 
         #self.get_logger().info(f"Desired velocity set to: {velocity:.2f}; Angle corrected to {angle:.2f}")
         self.publisher_ackermann.publish(drive_msg)
