@@ -57,8 +57,7 @@ class WallFollow(Node):
         self.time = 0.0
         self.prev_time = 0.0
 
-
-    def get_range(self, range_data: LaserScan, angle): #alex and fiona
+    def get_range(self, range_data: LaserScan, angle):
 
         angle_increment = range_data.angle_increment                    # single step in deg
         min_angle = range_data.angle_min                                # starting angle of lidar
@@ -71,7 +70,7 @@ class WallFollow(Node):
 
         return range 
 
-    def get_error(self, range_data: LaserScan, dist): #others
+    def get_error(self, range_data: LaserScan, dist):
 
         if self.get_parameter("lor").get_parameter_value().string_value == 'left':
             self.v = 1
@@ -108,7 +107,7 @@ class WallFollow(Node):
 
         return error
 
-    def pid_control(self, error, velocity, range_data: LaserScan):
+    def pid_control(self, error, range_data: LaserScan):
 
         self.time = range_data.header.stamp.nanosec
 
@@ -142,18 +141,11 @@ class WallFollow(Node):
         angle = 0.0
         angle = pid
 
-        #Create AckermannDrive and fill it with angle and velocity then publish
-        drive_msg = AckermannDriveStamped()
-        
-        drive_msg.drive.steering_angle = angle * self.v
-        drive_msg.drive.speed = velocity
-
-        #self.get_logger().info(f"Desired velocity set to: {velocity:.2f}; Angle corrected to {angle:.2f}")
-        self.publisher_ackermann.publish(drive_msg)
-
         #Store history
         self.prev_time = self.time
         self.prev_error = error
+
+        return angle
 
 
     def scan_callback(self, msg):
@@ -175,9 +167,20 @@ class WallFollow(Node):
         else:
             # Large error, sharp turn or correction required, slow down
             velocity = 0.5 
-
+        
         # Trigger the PID controller with the calculated error and velocity
-        self.pid_control(self.error, velocity, msg)
+        angle = self.pid_control(self.error, msg)
+
+        ### publishing 
+        #Create AckermannDrive and fill it with angle and velocity then publish
+        drive_msg = AckermannDriveStamped()
+
+        drive_msg.drive.steering_angle = angle * self.v
+        drive_msg.drive.speed = velocity
+
+        #self.get_logger().info(f"Desired velocity set to: {velocity:.2f}; Angle corrected to {angle:.2f}")
+        self.publisher_ackermann.publish(drive_msg)
+
         
 def main(args=None):
     rclpy.init(args=args)
