@@ -16,13 +16,19 @@ class WallFollow(Node):
         lidarscan_topic = '/scan'
         drive_topic = '/drive_wf'
         
-        #Initialized Publisher for the new drive data
+        # Initializing Publisher for the new drive data
         self.publisher_ackermann = self.create_publisher(AckermannDriveStamped, drive_topic, 10)
+
+        # Initializing Subsciber for the LiDAR data
         self.laser_scan_subscriber = self.create_subscription(LaserScan, lidarscan_topic, self.scan_callback, 10)
+
+        # Initializing the Parameter to choose which wall to follow (Standard is left wall)
+        self.declare_parameter("lor", 'left')
         
-        
+        # Initializing the Paramter for differentiating betwen simulation or real configurations (Stardard is simulation)
         self.declare_parameter("sim_or_real", "sim")
         
+        # Initializing all the relevant Parameter in their configuration
         if self.get_parameter("sim_or_real").get_parameter_value().string_value == 'sim':
             self.declare_parameter("kp",1.3)
             self.declare_parameter("ki",0.25)
@@ -46,10 +52,8 @@ class WallFollow(Node):
             self.get_logger().info('ReactiveFollowGap node initialized in real mode.')
 
 
-
-        self.declare_parameter("lor", 'left')
         
-        # TODO: store history
+        # Intitialiting the "history" variables
         self.integral = 0.0
         self.prev_error = 0.0 
         self.error = 0.0
@@ -64,7 +68,7 @@ class WallFollow(Node):
         index = int(round((angle - min_angle) / angle_increment , 0))   # calc index by finding the needed steps for that angle
         range = range_data.ranges[index]                                # get the range at that point
         
-        # check for inf and nan
+        # Check for inf and nan
         if not np.isfinite(range):
             return 0.0
 
@@ -72,9 +76,10 @@ class WallFollow(Node):
 
     def get_error(self, range_data: LaserScan, dist):
 
+        # Check wether to follow the left or right wall
         if self.get_parameter("lor").get_parameter_value().string_value == 'left':
             self.v = 1
-        else:                   # check for left or right wall following. map is better or left, so mainly used that
+        else:                  
             self.v = -1
 
         theta = np.deg2rad(self.get_parameter("angle_diff").get_parameter_value().double_value)
@@ -85,60 +90,62 @@ class WallFollow(Node):
         a = self.get_range(range_data, a_angle) #distance to whats front left / right (prob. wall too)
         b = self.get_range(range_data, b_angle) #distance to whats directly on the left / right (wall)
 
-        # safety check: returns False if Nan, inf 
-        if not np.isfinite(a) or not np.isfinite(b):
-            return 0.0
-
-
-        alpha = np.arctan2(a * np.cos(theta) - b, # estimated wall angle relative to the car
+        alpha = np.arctan2(a * np.cos(theta) - b, # calculation of the heading angle
                         a * np.sin(theta)) 
 
-        Dt = b * np.cos(alpha) # curent distance to wall
+        Dt = b * np.cos(alpha) # calculation fo the curent distance to the wall
+        
+        ### Debug logger for theta, a, b, and alpha
+        #self.get_logger().info(f"theta: {theta:.2f}; alpha {alpha:.2f}, a: {a:.2f}; b {b:.2f}") 
         
 
-        #Dt = b * np.cos(alpha) # curent distance to wall
         L = self.get_parameter('lookahead').get_parameter_value().double_value  # lookahead distance
-        #self.get_logger().info(f"theta: {theta:.2f}; alpha {alpha:.2f}, a: {a:.2f}; b {b:.2f}")
-        
-        Dt1 = Dt + L * np.sin(alpha) # future projected distance to wall (estimated future distance)
 
+        Dt1 = Dt + L * np.sin(alpha) # calculation of the future projected distance to the wall
+
+
+        error = Dt1 - dist # calculation the error (distance between the future and desired distance)
         # positive error means car is too far from the wall
-        error = Dt1 - dist # actual d - desired d
 
         return error
 
     def pid_control(self, error, range_data: LaserScan):
 
+        # Getting the time from the LiDAR (in nanoseconds)
         self.time = range_data.header.stamp.nanosec
 
-        pid = 0.0 # initialize
+        pid = 0.0 # initialize the pid angle
 
         self.kp =  self.get_parameter('kp').get_parameter_value().double_value
         self.ki =  self.get_parameter('ki').get_parameter_value().double_value
         self.kd =  self.get_parameter('kd').get_parameter_value().double_value
 
-        # P-Part
-        #Calculated as: kp * error
+        ### P-Part
+        # Calculated as: kp * error
         p = self.kp*error
         
-        # I-Part
-        #Calculated as: integral + ki * error * delta_time
-        i = self.integral + self.ki * error * (self.time - self.prev_time) / 1e9 # maybe convert to sec         
-        self.integral = i #Integral is the accumulated correction/The actual integratet part up until now
-        #If necessary implement anti-Wind-up here.
-        # anti wind up
+        ### I-Part
+        # Calculated as: integral + ki * error * delta_time
+        i = self.integral + self.ki * error * (self.time - self.prev_time) / 1e9    #1e9 is converting nanoseconds to seconds        
+        self.integral = i #Integral is the accumulated correction
+
+        # Anti-windup filter
         if self.integral >= 0.5:
             self.integral = 0.5
         if self.integral <= -0.5:
-            self.integral = -0.5    
-        # D-Part
-        #Calculated as: kd * (delta_error / delta_time)
-        d = self.kd * ((error - self.prev_error) / (self.time - self.prev_time) *1e9)
+            self.integral = -0.5
 
-        # Combination
+        ### D-Part
+        # Calculated as: kd * (delta_error / delta_time)
+        d = self.kd * ((error - self.prev_error) / (self.time - self.prev_time) *1e9)   #1e9 is converting nanoseconds to seconds
+
+        # Summation of the PID
         pid = p + i + d
-        #self.get_logger().info(f"pid was: {pid:.2f}, p was: {p:.2f}, i was: {i:.2f}, d was: {d:.2f},") # use to test
-        angle = 0.0
+
+        ### Debug logger for the PID
+        #self.get_logger().info(f"pid was: {pid:.2f}, p was: {p:.2f}, i was: {i:.2f}, d was: {d:.2f},")
+
+        # Saving the PID as an angle, to simplify understanding
         angle = pid
 
         #Store history
@@ -150,9 +157,10 @@ class WallFollow(Node):
 
     def scan_callback(self, msg):
 
-        # The desired distance to follow (e.g., stay 1.0 meter away from the left wall)
+        # The desired distance to follow (e.g., stay 1.0 meters away from the left wall)
         self.desired_distance =  self.get_parameter('desired_distance').get_parameter_value().double_value
         
+        # Calculate the the error
         self.error = self.get_error(msg, self.desired_distance) 
 
         # Create a dynamic velocity profile based on the magnitude of the error
@@ -168,17 +176,19 @@ class WallFollow(Node):
             # Large error, sharp turn or correction required, slow down
             velocity = 0.5 
         
-        # Trigger the PID controller with the calculated error and velocity
+        # Trigger the PID controller with the calculated error
         angle = self.pid_control(self.error, msg)
 
-        ### publishing 
+        ### Publishing 
         #Create AckermannDrive and fill it with angle and velocity then publish
         drive_msg = AckermannDriveStamped()
 
-        drive_msg.drive.steering_angle = angle * self.v
+        drive_msg.drive.steering_angle = angle * self.v     #variable v enables following both walls 
         drive_msg.drive.speed = velocity
 
+        ### Debug logger for the velocity and the steering angle
         #self.get_logger().info(f"Desired velocity set to: {velocity:.2f}; Angle corrected to {angle:.2f}")
+
         self.publisher_ackermann.publish(drive_msg)
 
         
